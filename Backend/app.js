@@ -1,12 +1,27 @@
-const express = require('express');//import express
-const body_parser = require('body-parser');
-const userRouter = require ("./routers/user.router");
+const express = require('express'); // Import express
+const bodyParser = require('body-parser'); // Import body-parser
+const cors = require('cors'); // Import CORS middleware
 
-const app =express();//variable to import express and express will be a function
+// Import routers
+const userRouter = require('./routers/user.router'); // User routes
+const alertRouter = require('./routers/alert.routes'); // Flood alert routes
 
-app.use(body_parser.json());
+const app = express(); // Initialize express app
 
-app.use("/",userRouter);
+// Middleware
+app.use(bodyParser.json()); // Parse incoming JSON payloads
+app.use(cors()); // Enable CORS for API access
 
-module.exports = app;//used to export app.js in other file
+// Routes
+app.use('/', userRouter); // Routes for user registration/login
+app.use('/', alertRouter); // Routes for flood alerts
+
+// Root Route
+app.get('/', (req, res) => {
+  res.send('Welcome to SafeSewa API');
+});
+
+// Export app for server initialization
+module.exports = app;
+
 
