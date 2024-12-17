@@ -11,6 +11,8 @@ app.get('/',(req,res)=>{//create a get request then route to a root folder and d
 
 
 
+
+
 app.listen(port,()=>{
-    console.log('port running on http://localhost:'+port)
+    console.log('port running on http:192.168.101.9:'+port)
 })

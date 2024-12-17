@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'config.dart';
 
 class Dashboard extends StatefulWidget {
   final String token;
@@ -14,12 +15,15 @@ class Dashboard extends StatefulWidget {
 class _DashboardState extends State<Dashboard> {
   final List<String> notifications = []; // List to store notifications
   late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
+  List<dynamic> alerts = [];
+  int floodAlertCount = 0;
 
   @override
   void initState() {
     super.initState();
     initializeLocalNotifications();
     subscribeToFloodAlerts();
+    _fetchAlerts();
   }
 
   // Initialize Flutter Local Notifications
@@ -78,6 +82,16 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
+  // Fetch flood alerts from backend
+  Future<void> _fetchAlerts() async {
+    final data = await ApiService.fetchFloodAlerts();
+    setState(() {
+      alerts = data;
+      floodAlertCount =
+          alerts.where((alert) => alert['status'] == 'Flood Alert!').length;
+    });
+  }
+
   // Function to display notifications list
   void _showNotificationsList(BuildContext context) {
     showModalBottomSheet(
@@ -125,15 +139,20 @@ class _DashboardState extends State<Dashboard> {
           Stack(
             children: [
               IconButton(
-                icon: const Icon(Icons.notifications),
+                icon: const Icon(Icons.notifications, size: 30),
                 onPressed: () {
-                  _showNotificationsList(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AlertListScreen(alerts: alerts),
+                    ),
+                  );
                 },
               ),
-              if (notifications.isNotEmpty)
+              if (floodAlertCount > 0)
                 Positioned(
-                  right: 8,
-                  top: 8,
+                  right: 10,
+                  top: 10,
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: const BoxDecoration(
@@ -141,8 +160,12 @@ class _DashboardState extends State<Dashboard> {
                       shape: BoxShape.circle,
                     ),
                     child: Text(
-                      notifications.length.toString(),
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                      '$floodAlertCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -151,11 +174,52 @@ class _DashboardState extends State<Dashboard> {
         ],
       ),
       body: Center(
-        child: Text(
-          "Welcome to the Dashboard!\nToken: ${widget.token}",
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              "Welcome to the Dashboard!\nToken: ${widget.token}",
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            ElevatedButton(
+              onPressed: _fetchAlerts, // Refresh button
+              child: const Text('Refresh Alerts'),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+// Alert List Screen
+class AlertListScreen extends StatelessWidget {
+  final List<dynamic> alerts;
+  const AlertListScreen({super.key, required this.alerts});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Flood Alerts')),
+      body: ListView.builder(
+        itemCount: alerts.length,
+        itemBuilder: (context, index) {
+          final alert = alerts[index];
+          return ListTile(
+            title: Text(alert['stationName']),
+            subtitle: Text('Water Level: ${alert['waterLevel']}'),
+            trailing: Text(
+              alert['status'],
+              style: TextStyle(
+                color: alert['status'] == 'Flood Alert!'
+                    ? Colors.red
+                    : Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          );
+        },
       ),
     );
   }

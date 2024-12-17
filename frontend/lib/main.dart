@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+// ignore: depend_on_referenced_packages
 import 'package:firebase_core/firebase_core.dart'; // Firebase Core for initialization
 import 'package:firebase_messaging/firebase_messaging.dart'; // For FCM notifications
 import 'login.dart'; // Login widget

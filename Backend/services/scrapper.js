@@ -1,42 +1,40 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 
-let floodAlerts = []; // Array to store flood alerts
-
-// Function to scrape water level data
 const scrapeWaterLevels = async () => {
   try {
-    const url = 'https://dhm.gov.np/hydrology/realtime-stream'; // Replace with the target webpage URL
+    const url = 'http://www.dhm.gov.np/';
     const response = await axios.get(url);
     const html = response.data;
 
     const $ = cheerio.load(html);
-    floodAlerts = []; // Reset the flood alerts array
+    const waterLevels = [];
 
-    // Scrape table data
+    console.log('Scraping water level data...');
+
     $('table tr').each((index, element) => {
       if (index > 0) { // Skip the table header
-        const stationName = $(element).find('td:nth-child(4)').text().trim();
-        const waterLevelText = $(element).find('td:nth-child(6)').text().trim();
-        const waterLevel = parseFloat(waterLevelText);
+        const stationName = $(element).find('td').eq(0).text().trim();
+        const waterLevelRaw = $(element).find('td').eq(1).text().trim();
+        const waterLevel = parseFloat(waterLevelRaw.replace(/[^\d.-]/g, '')) || 0;
 
-        if (!isNaN(waterLevel)) {
-          if (waterLevel > 6) {
-            floodAlerts.push({ stationName, waterLevel, status: 'Flood Alert' });
-          } else if (waterLevel < 1) {
-            floodAlerts.push({ stationName, waterLevel, status: 'Low Water Level' });
-          }
+        if (stationName) {
+          waterLevels.push({
+            stationName: stationName,
+            waterLevel: waterLevel,
+            status: waterLevel >= 1 ? 'Flood Alert!' : 'No Flood',
+          });
         }
       }
     });
 
-    console.log('Water Levels Scraped Successfully:', floodAlerts);
+    console.log('Water Levels Scraped:', waterLevels);
+    return waterLevels;
   } catch (error) {
-    console.error('Error scraping water levels:', error.message);
+    console.error('Error scraping data:', error.message);
+    return [];
   }
 };
 
-// Getter function to access flood alerts
-const getFloodAlerts = () => floodAlerts;
-
-module.exports = { scrapeWaterLevels, getFloodAlerts };
+// Export the function
+module.exports = { scrapeWaterLevels };
