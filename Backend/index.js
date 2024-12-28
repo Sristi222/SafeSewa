@@ -1,18 +1,15 @@
-//Create express server//
-const app = require("./app");//import app.js
+const app = require("./app");
 const db = require("./config/db");
 const UserModel = require('./model/user.model');
 
 const port = 3000;
 
-app.get('/',(req,res)=>{//create a get request then route to a root folder and decleare as a function
-    res.send("Hello World !!!")
-})
+app.get('/', (req, res) => {
+    res.send("Hello World !!!");
+});
 
-
-
-
-
-app.listen(port,()=>{
-    console.log('port running on http:192.168.101.9:'+port)
-})
+// Change localhost to 0.0.0.0 to allow external connections
+app.listen(port, '0.0.0.0', () => {
+    console.log(`Server is running on http://0.0.0.0:${port}`);
+    console.log(`Access locally: http://localhost:${port}`);
+});

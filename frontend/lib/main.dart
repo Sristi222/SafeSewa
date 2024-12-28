@@ -96,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Authentication UI')),
+      appBar: AppBar(title: const Text('SafeSewa')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

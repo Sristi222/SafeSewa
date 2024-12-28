@@ -1,5 +1,6 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
+const cron = require('node-cron');
 
 const scrapeWaterLevels = async () => {
   try {
@@ -22,7 +23,7 @@ const scrapeWaterLevels = async () => {
           waterLevels.push({
             stationName: stationName,
             waterLevel: waterLevel,
-            status: waterLevel >= 1 ? 'Flood Alert!' : 'No Flood',
+            status: waterLevel >= 3 ? 'Flood Alert!' : 'No Flood',
           });
         }
       }
@@ -35,6 +36,14 @@ const scrapeWaterLevels = async () => {
     return [];
   }
 };
+
+cron.schedule('*/15 * * * *', async () => {
+  console.log('Running scheduled scraping...');
+  const waterLevels = await scrapeWaterLevels();
+  console.log('Scraping completed.');
+});
+
+console.log('Cron job scheduled to scrape data every 15 minutes.');// to fetch data every 15 minutes
 
 // Export the function
 module.exports = { scrapeWaterLevels };
