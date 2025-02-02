@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'notification.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'profile_page.dart';
 import 'config.dart';
+import 'feed_screen.dart'; // Import Feed Screen
 
 class Dashboard extends StatefulWidget {
   final String token;
@@ -13,15 +16,17 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
-  final List<String> notifications = []; // List to store notifications
-  List<dynamic> alerts = []; // List to store flood alerts
-  int floodAlertCount = 0; // Counter for flood alerts
+  final List<String> notifications = [];
+  List<dynamic> alerts = [];
+  int floodAlertCount = 0;
   late NotificationService notificationService;
+  int _selectedIndex = 0;
+  String? username; // Store logged-in user's username
 
   @override
   void initState() {
     super.initState();
-    // Initialize the notification service
+    _loadUserData(); // Load username from SharedPreferences
     notificationService = NotificationService();
     notificationService.initializeLocalNotifications();
     notificationService.subscribeToFloodAlerts(onNewNotification: (title, body) {
@@ -29,10 +34,9 @@ class _DashboardState extends State<Dashboard> {
         notifications.add("$title: $body");
       });
     });
-    _fetchAlerts(); // Fetch flood alerts
+    _fetchAlerts();
   }
 
-  // Fetch flood alerts from backend
   Future<void> _fetchAlerts() async {
     final data = await ApiService.fetchFloodAlerts();
     setState(() {
@@ -42,19 +46,54 @@ class _DashboardState extends State<Dashboard> {
     });
   }
 
+  // Load username from SharedPreferences
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      username = prefs.getString('username') ?? 'Guest';
+    });
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+
+    switch (index) {
+      case 0:
+        break;
+      case 1:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AlertListScreen(alerts: alerts),
+          ),
+        );
+        break;
+      case 2:
+        break;
+      case 3:
+        break;
+      case 4:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => FeedScreen()), // ✅ FIXED HERE
+        );
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Dashboard"),
         actions: [
-          // Notification Icon with Badge
           Stack(
             children: [
               IconButton(
                 icon: const Icon(Icons.notifications, size: 30),
                 onPressed: () {
-                  // Navigate to the alert list screen
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -85,13 +124,21 @@ class _DashboardState extends State<Dashboard> {
                 ),
             ],
           ),
+          IconButton(
+            icon: const Icon(Icons.account_circle, size: 30), // Profile Icon
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ProfilePage()), // Navigate to Profile Page
+              );
+            },
+          ),
         ],
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Hero Banner Section
             Stack(
               children: [
                 Container(
@@ -99,7 +146,7 @@ class _DashboardState extends State<Dashboard> {
                   height: 150,
                   decoration: const BoxDecoration(
                     image: DecorationImage(
-                      image: AssetImage('assets/rescuer_banner.jpg'), // Add the appropriate image
+                      image: AssetImage('assets/rescuer_banner.jpg'),
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -111,9 +158,9 @@ class _DashboardState extends State<Dashboard> {
                   child: Container(
                     color: Colors.blue.withOpacity(0.8),
                     padding: const EdgeInsets.all(8.0),
-                    child: Column(
+                    child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
                           'Stay Alert, Stay Safe',
                           style: TextStyle(
@@ -136,13 +183,10 @@ class _DashboardState extends State<Dashboard> {
                 ),
               ],
             ),
-
             const SizedBox(height: 20),
-
-            // Quick Actions Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: const Text(
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
                 'Quick Actions',
                 style: TextStyle(
                   fontSize: 18,
@@ -159,7 +203,7 @@ class _DashboardState extends State<Dashboard> {
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
               ),
-              itemCount: 6, // Number of actions
+              itemCount: 6,
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               itemBuilder: (context, index) {
                 return Card(
@@ -167,21 +211,16 @@ class _DashboardState extends State<Dashboard> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.contact_phone), // Placeholder icon
-                    onPressed: () {
-                      // Handle button actions
-                    },
+                    icon: const Icon(Icons.contact_phone),
+                    onPressed: () {},
                   ),
                 );
               },
             ),
-
             const SizedBox(height: 20),
-
-            // Recent Alerts Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: const Text(
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
                 'Recent Alerts',
                 style: TextStyle(
                   fontSize: 18,
@@ -193,7 +232,7 @@ class _DashboardState extends State<Dashboard> {
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: alerts.length, // Number of recent alerts
+              itemCount: alerts.length,
               itemBuilder: (context, index) {
                 final alert = alerts[index];
                 return Card(
@@ -219,24 +258,22 @@ class _DashboardState extends State<Dashboard> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Alerts'),
           BottomNavigationBarItem(icon: Icon(Icons.sos, color: Colors.red), label: 'SOS'),
           BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
-          BottomNavigationBarItem(icon: Icon(Icons.volunteer_activism), label: 'Donation'),
+          BottomNavigationBarItem(icon: Icon(Icons.feed), label: 'Feed'),
         ],
-        onTap: (index) {
-          // Handle navigation actions
-        },
       ),
     );
   }
 }
 
-// Alert List Screen
 class AlertListScreen extends StatelessWidget {
-  final List<dynamic> alerts; // List of alerts
+  final List<dynamic> alerts;
   const AlertListScreen({super.key, required this.alerts});
 
   @override
@@ -244,7 +281,7 @@ class AlertListScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Flood Alerts')),
       body: ListView.builder(
-        itemCount: alerts.length, // Number of alerts
+        itemCount: alerts.length,
         itemBuilder: (context, index) {
           final alert = alerts[index];
           return ListTile(
@@ -253,9 +290,7 @@ class AlertListScreen extends StatelessWidget {
             trailing: Text(
               alert['status'],
               style: TextStyle(
-                color: alert['status'] == 'Flood Alert!'
-                    ? Colors.red
-                    : Colors.green,
+                color: alert['status'] == 'Flood Alert!' ? Colors.red : Colors.green,
                 fontWeight: FontWeight.bold,
               ),
             ),

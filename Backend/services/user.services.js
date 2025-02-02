@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 // Create UserServices class
 class UserServices {
   // Method to register a new user
-  static async registerUser(email, password) {
+  static async registerUser(username, email, password) {
     try {
       // Check if the email already exists
       const existingUser = await this.checkUser(email);
@@ -13,7 +13,7 @@ class UserServices {
       }
 
       // Create and save a new user
-      const createUser = new userModel({ email, password });
+      const createUser = new userModel({ username, email, password });
       return await createUser.save();
     } catch (err) {
       throw err;

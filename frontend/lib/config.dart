@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String _apiUrl = 'http://192.168.101.3:3000/api/flood-alerts';
+  static const String _apiUrl = 'http://192.168.1.6:3000/api/flood-alerts';
 
   // Fetch flood alerts from backend
   static Future<List<dynamic>> fetchFloodAlerts() async {
@@ -21,7 +21,7 @@ class ApiService {
 }
 
 // ignore: prefer_const_declarations
-final url = 'http://192.168.101.3:3000/';
+final url = 'http://192.168.1.6:3000/';//http://100.64.216.142:3000/
 // ignore: prefer_interpolation_to_compose_strings
 final registration = url + "registration";
 // ignore: prefer_interpolation_to_compose_strings

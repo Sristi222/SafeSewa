@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => const HomeScreen(), // Home screen route
         '/login': (context) => SignInPage(), // Login screen route
         '/signup': (context) => SignupPage(), // Signup screen route
-        '/dashboard': (context) => Dashboard(token: ''), // Dashboard route
+        '/dashboard': (context) => const Dashboard(token: ''), // Dashboard route
       },
     );
   }

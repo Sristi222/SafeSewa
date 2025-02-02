@@ -39,6 +39,14 @@ dependencies:
   velocity_x: ^4.2.1
   firebase_messaging: ^15.1.6
   flutter_local_notifications: ^18.0.1
+  shared_preferences: ^2.0.8
+  image_picker: ^1.1.2
+  google_fonts: ^6.2.1
+  
+  
+  
+
+ 
 
   
 dev_dependencies:
