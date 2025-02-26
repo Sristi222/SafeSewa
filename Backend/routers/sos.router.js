@@ -1,8 +1,10 @@
-const express = require('express');
-const router = express.Router();
-const sosController = require('../controller/sos.controller');
+const express = require("express");
+const { addEmergencyContact, getEmergencyContacts, sendSOS } = require("../controller/sos.controller");
 
-// SOS API endpoint
-router.post('/', sosController.sendSos);
+const router = express.Router();
+
+router.post("/emergencycontacts", addEmergencyContact);
+router.get("/emergencycontacts/:userId", getEmergencyContacts);
+router.post("/sos", sendSOS);
 
 module.exports = router;

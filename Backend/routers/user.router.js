@@ -1,11 +1,14 @@
+const express = require("express");
+const router = express.Router();
+const UserController = require("../controller/user.controller"); // Ensure this path is correct
 
+// ✅ User Authentication Routes
+router.post("/registration", UserController.register);
+router.post("/login", UserController.login);
 
-//Create registration application
-const router = require('express').Router();
-const UserController = require("../controller/user.controller");
+// ✅ Volunteer Management Routes
+router.get("/volunteers", UserController.getVolunteers);
+router.get("/volunteers/pending", UserController.getPendingVolunteers);
+router.put("/volunteers/approve/:id", UserController.approveVolunteer);
 
-router.post('/registration',UserController.register);
-router.post('/login',UserController.login);
-
-
-module.exports= router;
+module.exports = router;

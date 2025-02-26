@@ -5,9 +5,10 @@ const floodAlertRoutes = require('./routers/floodAlertRoutes');
 const sosRoutes = require('./routers/sos.router');
 const postRoutes = require('./routers/postRoutes');
 const connectDB = require('./config/dbpost');
-
+const { createAdminIfNotExists } = require("./model/user.model");
+const userRouter = require("./routers/user.router");
 // Import routers
-const userRouter = require('./routers/user.router'); // User routes
+
 
 
 const app = express(); // Initialize express app
@@ -18,10 +19,20 @@ app.use(cors()); // Enable CORS for API access
 app.use(express.json());//Mildeware
 
 // Routes
+app.use("/api", userRouter);
 app.use('/', userRouter); // Routes for user registration/login
 app.use('/api', floodAlertRoutes); // Routes for flood alerts
-app.use('/api/sos', sosRoutes);
 require('dotenv').config();
+
+
+
+// Ensure admin exists
+// ✅ Ensure Admin Exists on Startup
+createAdminIfNotExists().then(() => {
+  console.log("🚀 Admin check complete!");
+}).catch((err) => {
+  console.error("❌ Error creating admin:", err);
+});
 
 
 
@@ -35,7 +46,7 @@ connectDB();
 // Routes
 app.use('/posts', postRoutes);
 
-
+app.use("/api/sos", sosRoutes); // ✅ Register SOS routes
 
 // Root Route
 app.get('/', (req, res) => {

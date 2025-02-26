@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:frontend/config.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
-import 'dashboard.dart'; // Import the Dashboard page
+import 'dashboard.dart'; // Import Dashboard page
+import 'volunteer_dashboard.dart'; // Import Volunteer Dashboard page
+import 'admin_dashboard.dart'; // Import Admin Dashboard page
 
 class SignInPage extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
@@ -23,32 +26,55 @@ class SignInPage extends StatelessWidget {
 
     try {
       final response = await http.post(
-        Uri.parse(login), // Replace with your backend URL
+        Uri.parse(login),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"email": email, "password": password}),
       );
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
+        final bool isSuccess = jsonResponse['status'] ?? false;
+        final String? userId = jsonResponse['userId'];
+        final String? token = jsonResponse['token'];
+        final String? role = jsonResponse['role'];
 
-        if (jsonResponse['status']) {
-          final token = jsonResponse['token'];
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => Dashboard(token: token)),
-          );
-        } else {
+        if (!isSuccess || userId == null || token == null || role == null) {
+          print("❌ ERROR: User ID or Role is null or missing!");
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(jsonResponse['message'] ?? 'Login failed')),
+            const SnackBar(content: Text("Login failed. Please try again.")),
           );
+          return;
         }
+
+        print("✅ Login Successful! User ID: $userId, Role: $role");
+
+        // ✅ Store token & userId in SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString("token", token);
+        await prefs.setString("userId", userId);
+        await prefs.setString("role", role);
+
+        // ✅ Navigate to appropriate dashboard based on role
+        Widget nextPage;
+        if (role == "Volunteer") {
+          nextPage = VolunteerDashboard(token: token, userId: userId);
+        } else if (role == "Admin") {
+          nextPage = AdminDashboard(token: token, userId: userId);
+        } else {
+          nextPage = Dashboard(token: token, userId: userId);
+        }
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => nextPage),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Invalid email or password")),
         );
       }
     } catch (error) {
-      print("Error during login: $error");
+      print("❌ Error during login: $error");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to connect to the server")),
       );

@@ -4,6 +4,8 @@ import '../services/postservice.dart';
 import 'package:intl/intl.dart';
 
 class FeedScreen extends StatefulWidget {
+  const FeedScreen({super.key});
+
   @override
   _FeedScreenState createState() => _FeedScreenState();
 }
@@ -11,7 +13,7 @@ class FeedScreen extends StatefulWidget {
 class _FeedScreenState extends State<FeedScreen> {
   late Future<List<dynamic>> posts;
   String profileName = "John Doe"; // Default Profile Name
-  TextEditingController _tweetController = TextEditingController();
+  final TextEditingController _tweetController = TextEditingController();
 
   @override
   void initState() {
@@ -250,15 +252,15 @@ class _FeedScreenState extends State<FeedScreen> {
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.favorite_border, color: Colors.red),
+                                const Icon(Icons.favorite_border, color: Colors.red),
                                 const SizedBox(width: 5),
                                 Text("${post['likes'] ?? 0}"),
                               ],
                             ),
-                            Row(
+                            const Row(
                               children: [
                                 Icon(Icons.comment, color: Colors.blueAccent),
-                                const SizedBox(width: 5),
+                                SizedBox(width: 5),
                                 Text("Reply"),
                               ],
                             ),

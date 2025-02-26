@@ -2,6 +2,7 @@ const app = require("./app");
 const db = require("./config/db");
 const UserModel = require('./model/user.model');
 const os = require('os'); // Import os module to fetch network interfaces
+const userRouter = require("./routers/user.router");
 
 // Define the port
 const port = process.env.PORT || 3000;
@@ -18,6 +19,7 @@ function getLocalIpAddress() {
     }
     return '127.0.0.1'; // Fallback to localhost if no IP is found
 }
+app.use("/api", userRouter); 
 
 // Root route
 app.get('/', (req, res) => {
@@ -75,6 +77,12 @@ app.get('/ipconfig', (req, res) => {
     });
     res.json(ipConfig);
 });
+
+
+
+const INFOBIP_API_KEY = "227e7805be7a2b2a006dfb06b217e50f-5eef9cbc-075f-4559-838f-f405c1cabfee";
+const INFOBIP_URL = "https://api.infobip.com/sms/2/text/advanced";
+
 
 // Start the server and allow external connections
 app.listen(port, '0.0.0.0', () => {

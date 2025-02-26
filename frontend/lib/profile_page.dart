@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfilePage extends StatefulWidget {
+  const ProfilePage({super.key});
+
   @override
   _ProfilePageState createState() => _ProfilePageState();
 }
@@ -11,8 +13,8 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
-  TextEditingController _nameController = TextEditingController();
-  TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
 
   @override
   void initState() {
@@ -59,8 +61,8 @@ class _ProfilePageState extends State<ProfilePage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: _nameController, decoration: InputDecoration(labelText: "Full Name")),
-            TextField(controller: _usernameController, decoration: InputDecoration(labelText: "Username")),
+            TextField(controller: _nameController, decoration: const InputDecoration(labelText: "Full Name")),
+            TextField(controller: _usernameController, decoration: const InputDecoration(labelText: "Username")),
           ],
         ),
         actions: [
@@ -70,7 +72,7 @@ class _ProfilePageState extends State<ProfilePage> {
               _saveProfileData();
               setState(() {}); // Update UI
             },
-            child: Text("Save"),
+            child: const Text("Save"),
           ),
         ],
       ),
@@ -117,14 +119,14 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ],
           ),
-          SizedBox(height: 20),
-          Text(_nameController.text, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+          const SizedBox(height: 20),
+          Text(_nameController.text, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
           Text(_usernameController.text, style: TextStyle(fontSize: 16, color: Colors.grey[400])),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
 
           // Buttons
           _actionButton(Icons.edit, "Edit Profile", Colors.blueAccent, _editProfile),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           _actionButton(Icons.logout, "Sign Out", Colors.redAccent, _signOut),
         ],
       ),
@@ -135,12 +137,12 @@ class _ProfilePageState extends State<ProfilePage> {
     return ElevatedButton.icon(
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       ),
       onPressed: onPressed,
       icon: Icon(icon, color: Colors.white),
-      label: Text(label, style: TextStyle(color: Colors.white)),
+      label: Text(label, style: const TextStyle(color: Colors.white)),
     );
   }
 }

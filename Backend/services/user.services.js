@@ -1,43 +1,69 @@
-const userModel = require('../model/user.model');
-const jwt = require('jsonwebtoken');
+const { User } = require("../model/user.model");
+const jwt = require("jsonwebtoken");
 
-// Create UserServices class
 class UserServices {
-  // Method to register a new user
-  static async registerUser(username, email, password) {
+  // ✅ Register a new user (Ensures Admins, Volunteers, and Users are correctly handled)
+  static async registerUser(username, email, password, phone, role) {
     try {
-      // Check if the email already exists
-      const existingUser = await this.checkUser(email);
+      const existingUser = await User.findOne({ email });
       if (existingUser) {
-        throw new Error('User with this email already exists');
+        throw new Error("User with this email already exists");
       }
 
-      // Create and save a new user
-      const createUser = new userModel({ username, email, password });
-      return await createUser.save();
+      const isApproved = role === "User"; // Volunteers need admin approval
+
+      const newUser = new User({ username, email, password, phone, role, isApproved });
+      return await newUser.save();
     } catch (err) {
       throw err;
     }
   }
 
-  // Method to check if a user exists in the database
+  // ✅ Check if a user exists (Used in Login)
   static async checkUser(email) {
     try {
-      return await userModel.findOne({ email }); // Retrieve user by email
+      return await User.findOne({ email }); // Fetch user details by email
     } catch (error) {
       throw error;
     }
   }
 
-  // Method to generate a JWT token
+  // ✅ Generate a JWT token
   static async generateToken(tokenData, secretKey, expiresIn) {
     try {
-      // Ensure `expiresIn` is provided correctly as part of the options object
       return jwt.sign(tokenData, secretKey, { expiresIn });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  
+  // ✅ Get Pending Volunteers (For Admin Approval)
+static async getPendingVolunteers() {
+  try {
+    console.log("📡 Fetching unapproved volunteers...");
+
+    const volunteers = await User.find(
+      { role: "Volunteer", isApproved: false }, // ✅ Corrected Query
+      "username email phone"
+    );
+
+    console.log(`✅ Found ${volunteers.length} pending volunteers.`);
+    return volunteers;
+  } catch (error) {
+    console.error("❌ Error retrieving volunteers:", error);
+    throw error;
+  }
+}
+
+  // ✅ Approve Volunteer (Admin Action)
+  static async approveVolunteer(userId) {
+    try {
+      return await User.findByIdAndUpdate(userId, { isApproved: true }, { new: true });
     } catch (error) {
       throw error;
     }
   }
 }
 
-module.exports = UserServices; // Export the class
+module.exports = UserServices;
