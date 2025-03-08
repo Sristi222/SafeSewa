@@ -8,24 +8,51 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   TextEditingController _controller = TextEditingController();
+  List<String> emergencyContacts = [];
 
   @override
   void initState() {
     super.initState();
-    _loadEmergencyNumber();
+    _loadEmergencyNumbers();
   }
 
-  Future<void> _loadEmergencyNumber() async {
+  /// ✅ Load emergency numbers from SharedPreferences
+  Future<void> _loadEmergencyNumbers() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    _controller.text = prefs.getString('emergency_number') ?? '';
+    setState(() {
+      emergencyContacts = prefs.getStringList('emergency_numbers') ?? [];
+    });
   }
 
-  Future<void> _saveEmergencyNumber() async {
+  /// ✅ Save emergency numbers to SharedPreferences
+  Future<void> _saveEmergencyNumbers() async {
+    if (_controller.text.isNotEmpty && emergencyContacts.length < 2) {
+      setState(() {
+        emergencyContacts.add(_controller.text);
+        _controller.clear();
+      });
+
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('emergency_numbers', emergencyContacts);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Emergency contact saved!')),
+      );
+    } else if (emergencyContacts.length >= 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('You can only store up to 2 contacts.')),
+      );
+    }
+  }
+
+  /// ✅ Remove a contact
+  Future<void> _removeContact(int index) async {
+    setState(() {
+      emergencyContacts.removeAt(index);
+    });
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('emergency_number', _controller.text);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Emergency contact saved!')),
-    );
+    await prefs.setStringList('emergency_numbers', emergencyContacts);
   }
 
   @override
@@ -37,7 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Emergency Contact Number:', style: TextStyle(fontSize: 18)),
+            Text('Emergency Contact Numbers:', style: TextStyle(fontSize: 18)),
             TextField(
               controller: _controller,
               keyboardType: TextInputType.phone,
@@ -46,11 +73,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
-            SizedBox(height: 20),
+            SizedBox(height: 10),
             ElevatedButton(
-              onPressed: _saveEmergencyNumber,
+              onPressed: _saveEmergencyNumbers,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
               child: Text('Save Contact', style: TextStyle(color: Colors.white)),
+            ),
+            SizedBox(height: 20),
+            Text('Saved Contacts:', style: TextStyle(fontSize: 18)),
+            Expanded(
+              child: ListView.builder(
+                itemCount: emergencyContacts.length,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    title: Text(emergencyContacts[index]),
+                    trailing: IconButton(
+                      icon: Icon(Icons.delete, color: Colors.red),
+                      onPressed: () => _removeContact(index),
+                    ),
+                  );
+                },
+              ),
             ),
           ],
         ),

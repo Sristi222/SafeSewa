@@ -7,6 +7,8 @@ import 'feed_screen.dart';
 import 'sos_screen.dart';
 import 'add_emergency_contact.dart'; // ✅ Import AddEmergencyContact
 import '../services/api_service.dart';
+import 'fundraiser_screen.dart'; // ✅ Import FundraiserScreen
+import './fundraiser_form_screen.dart'; // ✅ Import DonationScreen
 
 class Dashboard extends StatefulWidget {
   final String token;
@@ -74,6 +76,12 @@ class _DashboardState extends State<Dashboard> {
         break;
       case 4:
         Navigator.push(context, MaterialPageRoute(builder: (context) => FeedScreen()));
+        break;
+      case 5:
+        Navigator.push(context, MaterialPageRoute(builder: (context) => FundraiserFormScreen())); // ✅ Navigate to Fundraiser
+        break;
+      case 6:
+        Navigator.push(context, MaterialPageRoute(builder: (context) => FundraiserScreen())); // ✅ Navigate to Donation
         break;
     }
   }
@@ -171,30 +179,6 @@ class _DashboardState extends State<Dashboard> {
               ),
             ),
             const SizedBox(height: 10),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: alerts.length,
-              itemBuilder: (context, index) {
-                final alert = alerts[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: ListTile(
-                    title: Text(alert['stationName']),
-                    subtitle: Text('Water Level: ${alert['waterLevel']}'),
-                    trailing: Text(
-                      alert['status'],
-                      style: TextStyle(
-                        color: alert['status'] == 'Flood Alert!'
-                            ? Colors.red
-                            : Colors.green,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
           ],
         ),
       ),
@@ -210,6 +194,8 @@ class _DashboardState extends State<Dashboard> {
           BottomNavigationBarItem(icon: Icon(Icons.sos, color: Colors.red), label: 'SOS'),
           BottomNavigationBarItem(icon: Icon(Icons.contact_phone), label: 'Contacts'),
           BottomNavigationBarItem(icon: Icon(Icons.feed), label: 'Feed'),
+          BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Fundraisers'),
+          BottomNavigationBarItem(icon: Icon(Icons.volunteer_activism), label: 'Donations'),
         ],
       ),
     );
