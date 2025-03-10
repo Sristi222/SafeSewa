@@ -2,7 +2,7 @@ const express = require('express'); // Import express
 const bodyParser = require('body-parser'); // Import body-parser
 const cors = require('cors'); // Import CORS middleware
 const floodAlertRoutes = require('./routers/floodAlertRoutes');
-const sosRoutes = require('./routers/sos.router');
+
 const postRoutes = require('./routers/postRoutes');
 const connectDB = require('./config/dbpost');
 const { createAdminIfNotExists } = require("./model/user.model");
@@ -46,7 +46,6 @@ connectDB();
 // Routes
 app.use('/posts', postRoutes);
 
-app.use("/api/sos", sosRoutes); // ✅ Register SOS routes
 
 // Root Route
 app.get('/', (req, res) => {

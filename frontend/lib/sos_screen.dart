@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
-import './add_emergency_contact.dart';
 
 class SOSScreen extends StatefulWidget {
   @override
@@ -10,27 +9,27 @@ class SOSScreen extends StatefulWidget {
 }
 
 class _SOSScreenState extends State<SOSScreen> {
-  String emergencyNumber = '';
+  List<String> emergencyContacts = [];
 
   @override
   void initState() {
     super.initState();
-    _loadEmergencyNumber();
+    _loadEmergencyNumbers();
   }
 
-  /// ✅ Load Emergency Contact from Shared Preferences
-  Future<void> _loadEmergencyNumber() async {
+  /// ✅ Load Emergency Contacts from SharedPreferences
+  Future<void> _loadEmergencyNumbers() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-      emergencyNumber = prefs.getString('emergency_number') ?? '';
+      emergencyContacts = prefs.getStringList('emergency_numbers') ?? [];
     });
   }
 
-  /// ✅ Send SOS Message with Exact Latitude & Longitude
+  /// ✅ Send SOS Message to Multiple Contacts
   Future<void> _sendSOS() async {
-    if (emergencyNumber.isEmpty) {
+    if (emergencyContacts.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please set an emergency contact in Profile.')),
+        SnackBar(content: Text('Please set at least one emergency contact in Profile.')),
       );
       return;
     }
@@ -66,13 +65,13 @@ class _SOSScreenState extends State<SOSScreen> {
       return;
     }
 
-    // ✅ Fetch user location with high accuracy
+    // ✅ Fetch user location
     Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
 
     double latitude = position.latitude;
     double longitude = position.longitude;
 
-    // ✅ Construct location message with exact coordinates & Google Maps link
+    // ✅ Construct location message
     String locationMessage =
         "🚨 SOS ALERT! 🚨\n"
         "I need immediate help!\n"
@@ -82,15 +81,17 @@ class _SOSScreenState extends State<SOSScreen> {
         "🔗 Google Maps Link:\n"
         "https://www.google.com/maps?q=$latitude,$longitude";
 
-    // ✅ Send SOS message via SMS
-    String smsUrl = "sms:$emergencyNumber?body=${Uri.encodeComponent(locationMessage)}";
+    // ✅ Send SOS to multiple contacts
+    for (String contact in emergencyContacts) {
+      String smsUrl = "sms:$contact?body=${Uri.encodeComponent(locationMessage)}";
 
-    if (await canLaunch(smsUrl)) {
-      await launch(smsUrl);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to send SOS message.')),
-      );
+      if (await canLaunch(smsUrl)) {
+        await launch(smsUrl);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send SOS to $contact.')),
+        );
+      }
     }
   }
 
@@ -98,31 +99,12 @@ class _SOSScreenState extends State<SOSScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('SOS App')),
-      drawer: Drawer(
-        child: ListView(
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(color: Colors.red),
-              child: Text('Menu', style: TextStyle(color: Colors.white, fontSize: 24)),
-            ),
-            ListTile(
-              title: Text('Profile'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ProfileScreen()),
-                ).then((_) => _loadEmergencyNumber());
-              },
-            ),
-          ],
-        ),
-      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Press the button to send an SOS alert.',
+              'Press the button to send an SOS alert to your emergency contacts.',
               style: TextStyle(fontSize: 16),
             ),
             SizedBox(height: 20),
