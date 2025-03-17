@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'notification.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'profile_page.dart';
@@ -9,11 +10,13 @@ import 'add_emergency_contact.dart'; // ✅ Import AddEmergencyContact
 import '../services/api_service.dart';
 import 'fundraiser_screen.dart'; // ✅ Import FundraiserScreen
 import './fundraiser_form_screen.dart'; // ✅ Import DonationScreen
+import './Sosbutton.dart';
 
 class Dashboard extends StatefulWidget {
   final String token;
+  final String userId; // ✅ Store userId correctly
 
-  const Dashboard({super.key, required this.token, required String userId});
+  const Dashboard({super.key, required this.token, required this.userId});
 
   @override
   State<Dashboard> createState() => _DashboardState();
@@ -38,7 +41,8 @@ class _DashboardState extends State<Dashboard> {
   Future<void> _fetchContacts() async {
     final contacts = await ApiServices.fetchEmergencyContacts();
     setState(() {
-      emergencyContacts = contacts.map((c) => "${c['name']} (${c['phone']})").toList();
+      emergencyContacts =
+          contacts.map((c) => "${c['name']} (${c['phone']})").toList();
     });
   }
 
@@ -68,21 +72,33 @@ class _DashboardState extends State<Dashboard> {
 
     switch (index) {
       case 2:
-        Navigator.push(context, MaterialPageRoute(builder: (context) => SOSScreen()));
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => SOSScreen(userId: widget.userId,)));
         break;
       case 3:
-        Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen()))
+        Navigator.push(context,
+                MaterialPageRoute(builder: (context) => ProfileScreen()))
             .then((_) => _fetchContacts()); // Refresh contacts after adding
         break;
       case 4:
-        Navigator.push(context, MaterialPageRoute(builder: (context) => FeedScreen()));
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => FeedScreen()));
         break;
       case 5:
-        Navigator.push(context, MaterialPageRoute(builder: (context) => FundraiserFormScreen())); // ✅ Navigate to Fundraiser
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) =>
+                    FundraiserFormScreen())); // ✅ Navigate to Fundraiser
         break;
       case 6:
-        Navigator.push(context, MaterialPageRoute(builder: (context) => FundraiserScreen())); // ✅ Navigate to Donation
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) =>
+                    FundraiserScreen())); // ✅ Navigate to Donation
         break;
+     
     }
   }
 
@@ -145,7 +161,8 @@ class _DashboardState extends State<Dashboard> {
             // **Emergency Contacts Section**
             const Padding(
               padding: EdgeInsets.all(16.0),
-              child: Text("Emergency Contacts", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              child: Text("Emergency Contacts",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
             emergencyContacts.isEmpty
                 ? const Center(child: Text("No emergency contacts added."))
@@ -163,8 +180,11 @@ class _DashboardState extends State<Dashboard> {
             const SizedBox(height: 10),
             ElevatedButton(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen()))
-                    .then((_) => _fetchContacts()); // Refresh contacts after adding
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => ProfileScreen())).then(
+                    (_) => _fetchContacts()); // Refresh contacts after adding
               },
               child: const Text("Add Emergency Contact"),
             ),
@@ -190,12 +210,19 @@ class _DashboardState extends State<Dashboard> {
         onTap: _onItemTapped,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Alerts'),
-          BottomNavigationBarItem(icon: Icon(Icons.sos, color: Colors.red), label: 'SOS'),
-          BottomNavigationBarItem(icon: Icon(Icons.contact_phone), label: 'Contacts'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.notifications), label: 'Alerts'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.sos, color: Colors.red), label: 'SOS'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.contact_phone), label: 'Contacts'),
           BottomNavigationBarItem(icon: Icon(Icons.feed), label: 'Feed'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Fundraisers'),
-          BottomNavigationBarItem(icon: Icon(Icons.volunteer_activism), label: 'Donations'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.favorite), label: 'Fundraisers'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.volunteer_activism), label: 'Donations'),
+              BottomNavigationBarItem(
+              icon: Icon(Icons.volunteer_activism), label: 'Usersos'),
         ],
       ),
     );
@@ -221,7 +248,9 @@ class AlertListScreen extends StatelessWidget {
             trailing: Text(
               alert['status'],
               style: TextStyle(
-                color: alert['status'] == 'Flood Alert!' ? Colors.red : Colors.green,
+                color: alert['status'] == 'Flood Alert!'
+                    ? Colors.red
+                    : Colors.green,
                 fontWeight: FontWeight.bold,
               ),
             ),

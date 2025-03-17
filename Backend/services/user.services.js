@@ -19,10 +19,10 @@ class UserServices {
     }
   }
 
-  // ✅ Check if a user exists (Used in Login)
+  // ✅ Check if a user exists (Used in Login) → UPDATED TO INCLUDE `isApproved`
   static async checkUser(email) {
     try {
-      return await User.findOne({ email }); // Fetch user details by email
+      return await User.findOne({ email }, "username email phone role password isApproved"); 
     } catch (error) {
       throw error;
     }
@@ -37,24 +37,23 @@ class UserServices {
     }
   }
 
-  
   // ✅ Get Pending Volunteers (For Admin Approval)
-static async getPendingVolunteers() {
-  try {
-    console.log("📡 Fetching unapproved volunteers...");
+  static async getPendingVolunteers() {
+    try {
+      console.log("📡 Fetching unapproved volunteers...");
 
-    const volunteers = await User.find(
-      { role: "Volunteer", isApproved: false }, // ✅ Corrected Query
-      "username email phone"
-    );
+      const volunteers = await User.find(
+        { role: "Volunteer", isApproved: false }, // ✅ Corrected Query
+        "username email phone"
+      );
 
-    console.log(`✅ Found ${volunteers.length} pending volunteers.`);
-    return volunteers;
-  } catch (error) {
-    console.error("❌ Error retrieving volunteers:", error);
-    throw error;
+      console.log(`✅ Found ${volunteers.length} pending volunteers.`);
+      return volunteers;
+    } catch (error) {
+      console.error("❌ Error retrieving volunteers:", error);
+      throw error;
+    }
   }
-}
 
   // ✅ Approve Volunteer (Admin Action)
   static async approveVolunteer(userId) {

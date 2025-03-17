@@ -21,8 +21,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   bool isFundraisersLoading = true;
   late TabController _tabController;
 
-  final String baseUrl = "http://192.168.1.8:3000"; // ✅ Updated localhost URL
-  final String fundraiserBaseUrl = "http://192.168.1.8:3000"; // Fundraiser API URL
+  final String baseUrl = "http://192.168.1.4:3000"; // ✅ Updated localhost URL
+  final String fundraiserBaseUrl = "http://192.168.1.4:3000"; // Fundraiser API URL
 
   @override
   void initState() {

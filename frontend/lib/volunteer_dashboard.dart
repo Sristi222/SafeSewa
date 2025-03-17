@@ -1,56 +1,68 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import "config.dart";
+import 'package:shared_preferences/shared_preferences.dart';
+import 'volunteerscreen.dart';
+import 'login.dart'; // ✅ Import Login Screen
 
 class VolunteerDashboard extends StatefulWidget {
   final String token;
   final String userId;
 
-  const VolunteerDashboard({required this.token, required this.userId, super.key});
+  const VolunteerDashboard({Key? key, required this.token, required this.userId}) : super(key: key);
 
   @override
   _VolunteerDashboardState createState() => _VolunteerDashboardState();
 }
 
 class _VolunteerDashboardState extends State<VolunteerDashboard> {
-  bool isApproved = false;
-  bool isLoading = true;
+  int _selectedIndex = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    checkApprovalStatus();
+  static List<Widget> _pages = <Widget>[
+    Center(
+      child: Text(
+        "Hi, Volunteer!",
+        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      ),
+    ),
+    VolunteerScreen(), // ✅ Navigate to SOS Alerts
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
-  Future<void> checkApprovalStatus() async {
-    try {
-      final response = await http.get(
-        Uri.parse("$baseUrl/user/${widget.userId}"),
-        headers: {"Authorization": "Bearer ${widget.token}"},
-      );
-
-      if (response.statusCode == 200) {
-        final jsonResponse = jsonDecode(response.body);
-        setState(() {
-          isApproved = jsonResponse['isApproved'] ?? false;
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      print("❌ Error checking approval status: $e");
-    }
+  /// ✅ Logout Function (Clears SharedPreferences & Navigates to Login)
+  Future<void> _signOut() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // ✅ Clear stored user data
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => SignInPage()), // ✅ Redirect to Login
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Volunteer Dashboard")),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : isApproved
-              ? const Center(child: Text("✅ Welcome Volunteer! You are approved."))
-              : const Center(child: Text("⏳ Your account is pending approval.")),
+      appBar: AppBar(
+        title: Text("Volunteer Dashboard"),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout, color: Colors.white),
+            onPressed: _signOut, // ✅ Calls sign-out function
+          ),
+        ],
+      ),
+      body: _pages[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Dashboard"),
+          BottomNavigationBarItem(icon: Icon(Icons.warning, color: Colors.red), label: "SOS Alerts"),
+        ],
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+      ),
     );
   }
 }

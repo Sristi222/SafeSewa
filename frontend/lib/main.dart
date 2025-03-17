@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-// ignore: depend_on_referenced_packages
 import 'package:firebase_core/firebase_core.dart'; // Firebase Core for initialization
 import 'package:firebase_messaging/firebase_messaging.dart'; // For FCM notifications
-import 'login.dart'; // Login widget
-import 'registration.dart'; // Signup widget
+import 'package:shared_preferences/shared_preferences.dart'; // ✅ Added SharedPreferences
+import 'login.dart';
+import 'registration.dart';
 import 'dashboard.dart';
+import 'admin_dashboard.dart';
+import 'volunteer_dashboard.dart';
 
-// Background message handler
+// Background message handler for FCM
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   print("Handling background message: ${message.messageId}");
@@ -14,16 +16,36 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // Initialize Firebase
+  await Firebase.initializeApp(); // ✅ Initialize Firebase
 
-  // Initialize Firebase Messaging
+  // ✅ Initialize Firebase Messaging
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  runApp(const MyApp());
+  // ✅ Retrieve saved user credentials for auto-login
+  final prefs = await SharedPreferences.getInstance();
+  String? token = prefs.getString("token");
+  String? userId = prefs.getString("userId");
+  String? role = prefs.getString("role");
+
+  Widget homeScreen;
+  if (token != null && userId != null && role != null) {
+    if (role == "Admin") {
+      homeScreen = AdminDashboard(token: token, userId: userId);
+    } else if (role == "Volunteer") {
+      homeScreen = VolunteerDashboard(token: token, userId: userId);
+    } else {
+      homeScreen = Dashboard(token: token, userId: userId);
+    }
+  } else {
+    homeScreen = const SignInPage(); // ✅ Redirect to login if no token is found
+  }
+
+  runApp(MyApp(homeScreen: homeScreen));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final Widget homeScreen;
+  const MyApp({super.key, required this.homeScreen});
 
   @override
   Widget build(BuildContext context) {
@@ -31,12 +53,12 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'SafeSewa',
       theme: ThemeData(primarySwatch: Colors.blue),
-      initialRoute: '/', // Set the initial route
+      initialRoute: '/', // ✅ Keep initial route
       routes: {
-        '/': (context) => const HomeScreen(), // Home screen route
-        '/login': (context) => SignInPage(), // Login screen route
-        '/signup': (context) => SignupPage(), // Signup screen route
-        '/dashboard': (context) => const Dashboard(token: '', userId: '',), // Dashboard route
+        '/': (context) => homeScreen, // ✅ Auto-login logic applied here
+        '/login': (context) => SignInPage(),
+        '/signup': (context) => SignupPage(),
+        '/dashboard': (context) => const Dashboard(token: '', userId: ''),
       },
     );
   }

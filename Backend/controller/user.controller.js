@@ -13,6 +13,7 @@ exports.register = async (req, res, next) => {
   }
 };
 
+// ✅ Updated login function with Volunteer Approval Check
 exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -20,15 +21,20 @@ exports.login = async (req, res, next) => {
 
     const user = await UserServices.checkUser(email);
     if (!user) {
-      console.log("❌ Admin not found!");
       return res.status(400).json({ status: false, error: "User does not exist" });
     }
 
-    console.log("✅ User found:", user.email, "Role:", user.role);
+    console.log("✅ User found:", user.email, "Role:", user.role, "Approved:", user.isApproved);
+
+    if (user.role === "Volunteer" && !user.isApproved) {
+      return res.status(403).json({ 
+        status: false, 
+        error: "Your account is pending approval by the Admin." 
+      });
+    }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      console.log("❌ Incorrect password for:", user.email);
       return res.status(400).json({ status: false, error: "Invalid password" });
     }
 
@@ -69,8 +75,6 @@ exports.getPendingVolunteers = async (req, res) => {
   }
 };
 
-
-
 exports.approveVolunteer = async (req, res) => {
   try {
     const volunteerId = req.params.id;
@@ -94,14 +98,8 @@ exports.approveVolunteer = async (req, res) => {
   }
 };
 
-
 // Ensure these functions are defined
 exports.getVolunteers = async (req, res) => {
   const volunteers = await UserServices.getPendingVolunteers();
   res.json(volunteers);
-};
-
-exports.approveVolunteer = async (req, res) => {
-  await UserServices.approveVolunteer(req.params.id);
-  res.json({ success: true, message: "Volunteer approved" });
 };

@@ -10,5 +10,6 @@ router.post("/login", UserController.login);
 router.get("/volunteers", UserController.getVolunteers);
 router.get("/volunteers/pending", UserController.getPendingVolunteers);
 router.put("/volunteers/approve/:id", UserController.approveVolunteer);
+router.put("/admin/approve/:id", UserController.approveVolunteer);
 
 module.exports = router;

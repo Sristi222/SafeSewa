@@ -9,21 +9,116 @@ const userRouter = require("./routers/user.router");
 const { initializeKhaltiPayment, verifyKhaltiPayment } = require("./khalti");
 const Donation = require("./donationModel");
 const mongoose = require('mongoose');
+const http = require("http");
+const cors = require("cors");
 const connectToMongo = require("./config/dbdonation");
+const sosRouter = require("./routers/sos.router");
+const { Server } = require("socket.io");
+const sosRoutes = require("./routers/sosRoutes");
+
+// Create HTTP server
+
+// Import models & routes
+
+
+const { SOS } = require("./model/SOS");
+
+// Initialize Express & HTTP Server
+
+const server = http.createServer(app);
+
+// ✅ Initialize WebSocket before exporting
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+  pingInterval: 10000, // ✅ Send ping to clients every 10 sec
+  pingTimeout: 20000,
+});
+
+
+// ✅ Allow WebSocket Connections
+app.use((req, res, next) => {
+    if (req.headers.upgrade && req.headers.upgrade.toLowerCase() === "websocket") {
+      return res.status(400).send("WebSocket requests must go through ws://");
+    }
+    next();
+  });
+
+// ✅ Attach io to app for global access
+app.set("io", io);
+
+// ✅ Middleware
+app.use(cors());
+app.use(bodyParser.json());
+app.use("/api", userRouter);
+app.use("/api", sosRoutes);
+
+// ✅ WebSocket Connection Event
+io.on("connection", (socket) => {
+    console.log(`🔌 Volunteer connected: ${socket.id}`);
+  
+    socket.on("disconnect", () => {
+      console.log(`❌ Volunteer disconnected: ${socket.id}`);
+    });
+    socket.on("ping", () => {
+        socket.emit("pong");
+      });
+    });
+
+
+
+// ✅ Connect to MongoDB before starting the server
+// ✅ MongoDB Connection (For SOS & Other Data)
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/newauth";
+mongoose
+  .connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("✅ Connected to MongoDB"))
+  .catch((err) => {
+    console.error("❌ MongoDB Connection Error:", err);
+    process.exit(1);
+  });
+  app.get("/api/sos-alerts", async (req, res) => {
+    try {
+      const sosAlerts = await SOS.find().sort({ createdAt: -1 });
+      res.status(200).json({ success: true, sosAlerts });
+    } catch (error) {
+      console.error("❌ Error fetching SOS alerts:", error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  });
+  
+  // ✅ Send SOS Alert (Trigger WebSocket)
+  app.post("/api/sos", async (req, res) => {
+    try {
+      const { userId, latitude, longitude } = req.body;
+  
+      if (!userId || !latitude || !longitude) {
+        return res.status(400).json({ success: false, message: "Invalid data" });
+      }
+  
+      // ✅ Save SOS to MongoDB
+      const sos = new SOS({ userId, latitude, longitude });
+      await sos.save();
+  
+      // ✅ Emit SOS Alert to Volunteers via WebSocket
+      io.emit("sosAlert", { userId, latitude, longitude });
+      console.log(`🚨 SOS Alert sent from user ${userId}`);
+  
+      res.status(201).json({ success: true, message: "SOS alert sent!" });
+    } catch (error) {
+      console.error("❌ Error sending SOS:", error);
+      res.status(500).json({ success: false, message: "Failed to send SOS" });
+    }
+  });
 
 connectToMongo();
 
 // Define the port
 const port = process.env.PORT || 3000;
 
-// ✅ Connect to MongoDB before starting the server
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/newauth';
-mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => console.log("✅ Connected to MongoDB"))
-    .catch(err => {
-        console.error("❌ MongoDB Connection Error:", err);
-        process.exit(1); // Exit the app if DB connection fails
-    });
+
 
 // Function to get the local IP address
 function getLocalIpAddress() {
@@ -41,6 +136,7 @@ function getLocalIpAddress() {
 // ✅ Middleware
 app.use(bodyParser.json());
 app.use("/api", userRouter);
+
 
 // Root route
 app.get('/', (req, res) => {
@@ -305,4 +401,5 @@ app.listen(port, '0.0.0.0', () => {
     console.log(`Server running on:`);
     console.log(` - Local: http://localhost:${port}`);
     console.log(` - Network: http://${localIp}:${port}`);
+    console.log(`🚀 Server running on ws://192.168.1.4:${port}`);
 });

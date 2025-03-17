@@ -48,6 +48,7 @@ app.use('/posts', postRoutes);
 
 app.use("/api/sos", sosRoutes); // ✅ Register SOS routes
 
+
 // Root Route
 app.get('/', (req, res) => {
   res.send('Welcome to SafeSewa API');
