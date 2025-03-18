@@ -112,6 +112,42 @@ mongoose
       res.status(500).json({ success: false, message: "Failed to send SOS" });
     }
   });
+  // **Volunteer accepts the SOS**
+app.post("/api/sos/accept", async (req, res) => {
+    const { volunteerId, sosId, latitude, longitude } = req.body;
+  
+    const sos = await SOS.findByIdAndUpdate(
+      sosId,
+      {
+        volunteerId,
+        volunteerLatitude: latitude,
+        volunteerLongitude: longitude,
+        accepted: true,
+        updatedAt: Date.now(),
+      },
+      { new: true }
+    );
+  
+    // Notify user via WebSocket
+    io.emit("volunteerAccepted", sos);
+  
+    res.status(200).json({ success: true, message: "Volunteer Accepted!", sos });
+  });
+  
+  // **Periodically update user & volunteer locations**
+  app.post("/api/sos/update-location", async (req, res) => {
+    const { sosId, userId, latitude, longitude, isVolunteer } = req.body;
+  
+    const updateData = isVolunteer
+      ? { volunteerLatitude: latitude, volunteerLongitude: longitude, updatedAt: Date.now() }
+      : { latitude, longitude, updatedAt: Date.now() };
+  
+    const sos = await SOS.findByIdAndUpdate(sosId, updateData, { new: true });
+  
+    io.emit("locationUpdate", sos);
+  
+    res.status(200).json({ success: true, message: "Location Updated!", sos });
+  });
 
 connectToMongo();
 

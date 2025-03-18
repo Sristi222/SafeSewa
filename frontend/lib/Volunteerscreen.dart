@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:web_socket_channel/io.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'Volunteer_Map.dart'; // Import the new map screen
 
 class VolunteerScreen extends StatefulWidget {
   @override
@@ -13,16 +14,16 @@ class _VolunteerScreenState extends State<VolunteerScreen> {
   late IOWebSocketChannel channel;
   List<Map<String, dynamic>> sosAlerts = [];
   bool isConnected = false;
-  final String backendUrl = "http://192.168.1.4:3000"; // ✅ Change this to your backend URL
+  final String backendUrl = "http://192.168.1.4:3000"; // Change this to your backend URL
 
   @override
   void initState() {
     super.initState();
-    _fetchInitialAlerts(); // ✅ Fetch existing alerts on load
+    _fetchInitialAlerts();
     _connectToWebSocket();
   }
 
-  /// ✅ Fetch existing SOS alerts from the database
+  /// ✅ Fetch existing SOS alerts
   Future<void> _fetchInitialAlerts() async {
     try {
       final response = await http.get(Uri.parse("$backendUrl/api/sos-alerts"));
@@ -41,7 +42,7 @@ class _VolunteerScreenState extends State<VolunteerScreen> {
     }
   }
 
-  /// ✅ Connect to WebSocket for live updates
+  /// ✅ Connect to WebSocket for real-time SOS alerts
   void _connectToWebSocket() {
     try {
       channel = IOWebSocketChannel.connect("ws://192.168.1.4:3000");
@@ -53,7 +54,7 @@ class _VolunteerScreenState extends State<VolunteerScreen> {
             final data = jsonDecode(message);
             if (mounted) {
               setState(() {
-                sosAlerts.insert(0, data); // Add new alerts at the top
+                sosAlerts.insert(0, data);
               });
             }
           } catch (e) {
@@ -88,22 +89,20 @@ class _VolunteerScreenState extends State<VolunteerScreen> {
     });
   }
 
+  /// ✅ Accept SOS & Redirect to In-App Map
+  void _acceptSOS(Map<String, dynamic> alert) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SOSMapScreen(alert: alert),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     channel.sink.close();
     super.dispose();
-  }
-
-  /// ✅ Open SOS Location in Google Maps
-  void _openGoogleMaps(double latitude, double longitude) async {
-    final googleMapsUrl = "https://www.google.com/maps/search/?api=1&query=$latitude,$longitude";
-    if (await canLaunch(googleMapsUrl)) {
-      await launch(googleMapsUrl);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Could not open Google Maps")),
-      );
-    }
   }
 
   @override
@@ -114,16 +113,14 @@ class _VolunteerScreenState extends State<VolunteerScreen> {
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),
-            onPressed: _fetchInitialAlerts, // ✅ Refresh alerts manually
+            onPressed: _fetchInitialAlerts,
           ),
-          isConnected
-              ? Icon(Icons.wifi, color: Colors.green)
-              : Icon(Icons.wifi_off, color: Colors.red),
+          isConnected ? Icon(Icons.wifi, color: Colors.green) : Icon(Icons.wifi_off, color: Colors.red),
           SizedBox(width: 10),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _fetchInitialAlerts, // ✅ Pull down to refresh alerts
+        onRefresh: _fetchInitialAlerts,
         child: sosAlerts.isEmpty
             ? Center(child: Text("No SOS Alerts Yet"))
             : ListView.builder(
@@ -136,9 +133,9 @@ class _VolunteerScreenState extends State<VolunteerScreen> {
                       leading: Icon(Icons.warning, color: Colors.red),
                       title: Text("🚨 SOS from User ${alert['userId']}"),
                       subtitle: Text("📍 Location: ${alert['latitude']}, ${alert['longitude']}"),
-                      trailing: IconButton(
-                        icon: Icon(Icons.map, color: Colors.blue),
-                        onPressed: () => _openGoogleMaps(alert['latitude'], alert['longitude']),
+                      trailing: ElevatedButton(
+                        onPressed: () => _acceptSOS(alert),
+                        child: Text("Accept"),
                       ),
                     ),
                   );

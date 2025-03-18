@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:dio/dio.dart';
-import "config.dart";
+import 'login.dart'; // ✅ Import Login Screen for Redirect
 
 class AdminDashboard extends StatefulWidget {
   final String token;
@@ -21,8 +22,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   bool isFundraisersLoading = true;
   late TabController _tabController;
 
-  final String baseUrl = "http://192.168.1.4:3000"; // ✅ Updated localhost URL
-  final String fundraiserBaseUrl = "http://192.168.1.4:3000"; // Fundraiser API URL
+  final String baseUrl = "http://192.168.1.4:3000"; // ✅ Change this to your backend URL
 
   @override
   void initState() {
@@ -38,6 +38,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     super.dispose();
   }
 
+  /// ✅ Fetch Pending Volunteers
   Future<void> fetchPendingVolunteers() async {
     setState(() => isLoading = true);
     try {
@@ -61,31 +62,26 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     }
   }
 
+  /// ✅ Fetch Pending Fundraisers
   Future<void> fetchPendingFundraisers() async {
-  setState(() => isFundraisersLoading = true);
-  try {
-    final dio = Dio();
-    final response = await dio.get('$fundraiserBaseUrl/pending-fundraisers');
+    setState(() => isFundraisersLoading = true);
+    try {
+      final dio = Dio();
+      final response = await dio.get('$baseUrl/pending-fundraisers');
 
-    print("📡 Fetching Pending Fundraisers...");
-    print("📡 API Response: ${response.statusCode} - ${response.data}");
-
-    if (response.statusCode == 200 && response.data['success']) {
-      print("✅ Fundraisers received: ${response.data['fundraisers'].length}");
-      setState(() {
-        fundraisers = response.data['fundraisers'];
-      });
-    } else {
-      print("⚠️ API returned false: ${response.data['message']}");
+      if (response.statusCode == 200 && response.data['success']) {
+        setState(() {
+          fundraisers = response.data['fundraisers'];
+        });
+      }
+    } catch (e) {
+      print("❌ Error fetching fundraisers: $e");
+    } finally {
+      setState(() => isFundraisersLoading = false);
     }
-  } catch (e) {
-    print("❌ Error fetching fundraisers: $e");
-  } finally {
-    setState(() => isFundraisersLoading = false);
   }
-}
 
-
+  /// ✅ Approve Volunteer
   Future<void> approveVolunteer(String id) async {
     try {
       final response = await http.put(
@@ -94,34 +90,46 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       );
 
       if (response.statusCode == 200) {
-        final jsonResponse = jsonDecode(response.body);
-        if (jsonResponse['status'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("✅ Volunteer approved!")),
-          );
-          setState(() {
-            pendingVolunteers.removeWhere((volunteer) => volunteer['_id'] == id);
-          });
-        }
+        setState(() {
+          pendingVolunteers.removeWhere((volunteer) => volunteer['_id'] == id);
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("✅ Volunteer approved!")),
+        );
       }
     } catch (e) {
       print("❌ Exception in approving volunteer: $e");
     }
   }
 
+  /// ✅ Approve Fundraiser
   Future<void> approveFundraiser(String id) async {
     try {
       final dio = Dio();
-      await dio.put('$fundraiserBaseUrl/approve-fundraiser/$id');
+      await dio.put('$baseUrl/approve-fundraiser/$id');
+
+      fetchPendingFundraisers();
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("✅ Fundraiser approved!")),
       );
-
-      fetchPendingFundraisers();
     } catch (e) {
       print("❌ Exception in approving fundraiser: $e");
     }
+  }
+
+  /// ✅ Sign Out (Clears Token & Redirects)
+  Future<void> _signOut() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // ✅ Clears stored login data
+
+    if (!mounted) return;
+    
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => SignInPage()), // ✅ Redirects to Login Page
+    );
   }
 
   @override
@@ -163,6 +171,12 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 _tabController.animateTo(1);
                 Navigator.pop(context);
               },
+            ),
+            const Spacer(), // Pushes Sign Out button to bottom
+            ListTile(
+              leading: const Icon(Icons.exit_to_app, color: Colors.red),
+              title: const Text("Sign Out"),
+              onTap: _signOut,
             ),
           ],
         ),
@@ -211,12 +225,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                                 }).toList(),
                               ),
                             )
-                          : const Center(
-                              child: Text(
-                                "No pending volunteers",
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                            ),
+                          : const Center(child: Text("No pending volunteers")),
                     ),
                   ],
                 ),
@@ -224,43 +233,21 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           // Fundraisers Tab
           isFundraisersLoading
               ? const Center(child: CircularProgressIndicator())
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        "Pending Fundraisers",
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              : ListView.builder(
+                  itemCount: fundraisers.length,
+                  itemBuilder: (context, index) {
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: ListTile(
+                        title: Text(fundraisers[index]['title'] ?? "No Title"),
+                        subtitle: Text(fundraisers[index]['description'] ?? "No Description"),
+                        trailing: ElevatedButton(
+                          onPressed: () => approveFundraiser(fundraisers[index]['_id']),
+                          child: const Text('Approve'),
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      child: fundraisers.isNotEmpty
-                          ? ListView.builder(
-                              itemCount: fundraisers.length,
-                              itemBuilder: (context, index) {
-                                return Card(
-                                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  child: ListTile(
-                                    title: Text(fundraisers[index]['title'] ?? "No Title"),
-                                    subtitle: Text(fundraisers[index]['description'] ?? "No Description"),
-                                    trailing: ElevatedButton(
-                                      onPressed: () => approveFundraiser(fundraisers[index]['_id']),
-                                      child: const Text('Approve'),
-                                    ),
-                                  ),
-                                );
-                              },
-                            )
-                          : const Center(
-                              child: Text(
-                                "No pending fundraisers",
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
         ],
       ),
