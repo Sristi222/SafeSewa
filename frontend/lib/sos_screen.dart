@@ -1,9 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:web_socket_channel/io.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class SOSScreen extends StatefulWidget {
   final String userId; // ✅ User ID required for backend
@@ -14,129 +15,132 @@ class SOSScreen extends StatefulWidget {
 }
 
 class _SOSScreenState extends State<SOSScreen> {
-  List<String> emergencyContacts = [];
-  bool isSendingSOS = false; // ✅ Added a flag to prevent multiple taps
+  bool isSendingSOS = false; // ✅ Prevent multiple taps
+  late GoogleMapController mapController;
+  LatLng? userLocation;
+  LatLng? volunteerLocation;
+  String statusMessage = "Waiting for a Volunteer...";
+  IOWebSocketChannel? channel;
+  Set<Marker> markers = {};
+  Set<Polyline> polylines = {}; // ✅ Route from volunteer to user
 
   @override
   void initState() {
     super.initState();
-    _loadEmergencyNumbers();
+    _getUserLocation();
   }
 
-  /// ✅ Load Emergency Contacts from SharedPreferences
-  Future<void> _loadEmergencyNumbers() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+  /// ✅ Get User's Current Location
+  Future<void> _getUserLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      _showSnackbar("⚠️ Enable location services.");
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.deniedForever) {
+      _showSnackbar("⚠️ Location permission denied permanently.");
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
     setState(() {
-      emergencyContacts = prefs.getStringList('emergency_numbers') ?? [];
+      userLocation = LatLng(position.latitude, position.longitude);
+      markers.add(
+        Marker(
+          markerId: MarkerId("user"),
+          position: userLocation!,
+          infoWindow: InfoWindow(title: "You"),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ),
+      );
     });
   }
 
-  /// ✅ Send SOS Alert to Volunteers & Emergency Contacts
+  /// ✅ Send SOS Alert to Volunteers
   Future<void> _sendSOS() async {
-    if (isSendingSOS) return; // Prevent duplicate requests
+    if (isSendingSOS || userLocation == null) return;
+
     setState(() {
       isSendingSOS = true;
+      statusMessage = "SOS Sent! Waiting for Volunteer...";
     });
 
-    if (emergencyContacts.isEmpty) {
-      _showSnackbar("⚠️ Please set at least one emergency contact in Profile.");
-      setState(() {
-        isSendingSOS = false;
-      });
-      return;
-    }
-
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    // ✅ Ensure location services are enabled
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      _showSnackbar("⚠️ Location services are disabled. Please enable them.");
-      setState(() {
-        isSendingSOS = false;
-      });
-      return;
-    }
-
-    // ✅ Check and request location permission
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        _showSnackbar("⚠️ Location permission denied. Enable it in settings.");
-        setState(() {
-          isSendingSOS = false;
-        });
-        return;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      _showSnackbar("⚠️ Location permission permanently denied. Enable it in settings.");
-      setState(() {
-        isSendingSOS = false;
-      });
-      return;
-    }
-
-    // ✅ Fetch user location
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-    double latitude = position.latitude;
-    double longitude = position.longitude;
-
-    // ✅ Send SOS to backend & emergency contacts
-    await _sendSOSAlertToVolunteers(latitude, longitude);
-    await _sendSOSMessageToContacts(latitude, longitude);
-
-    setState(() {
-      isSendingSOS = false;
-    });
-  }
-
-  /// ✅ Function to send SOS alert to volunteers (Backend API call)
-  Future<void> _sendSOSAlertToVolunteers(double latitude, double longitude) async {
     try {
       final response = await http.post(
         Uri.parse("http://192.168.1.4:3000/api/sos"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "userId": widget.userId,
-          "latitude": latitude,
-          "longitude": longitude,
+          "latitude": userLocation!.latitude,
+          "longitude": userLocation!.longitude,
         }),
       );
 
       if (response.statusCode == 201) {
         _showSnackbar("✅ SOS Sent! Volunteers Notified.");
+        _listenForVolunteerUpdates(); // ✅ Start listening for updates
       } else {
-        _showSnackbar("❌ Failed to notify volunteers. Try again.");
+        _showSnackbar("❌ Failed to notify volunteers.");
       }
     } catch (e) {
       _showSnackbar("⚠️ Error: Unable to send SOS.");
     }
+
+    setState(() {
+      isSendingSOS = false;
+    });
   }
 
-  /// ✅ Function to send SOS message to emergency contacts
-  Future<void> _sendSOSMessageToContacts(double latitude, double longitude) async {
-    String locationMessage =
-        "🚨 SOS ALERT! 🚨\n"
-        "I need immediate help!\n"
-        "📍 My location:\n"
-        "Latitude: $latitude\n"
-        "Longitude: $longitude\n"
-        "🔗 Google Maps Link:\n"
-        "https://www.google.com/maps?q=$latitude,$longitude";
+  /// ✅ Listen for Volunteer Location Updates via WebSocket
+  void _listenForVolunteerUpdates() {
+    channel = IOWebSocketChannel.connect("ws://192.168.1.4:3000");
+    channel!.stream.listen((message) {
+      final data = jsonDecode(message);
 
-    for (String contact in emergencyContacts) {
-      String smsUrl = "sms:$contact?body=${Uri.encodeComponent(locationMessage)}";
+      if (data['volunteerLatitude'] != null) {
+        setState(() {
+          statusMessage = "🚗 Volunteer is on the way!";
+          volunteerLocation = LatLng(data['volunteerLatitude'], data['volunteerLongitude']);
 
-      if (await canLaunch(smsUrl)) {
-        await launch(smsUrl);
-      } else {
-        _showSnackbar("⚠️ Failed to send SOS to $contact.");
+          markers.add(
+            Marker(
+              markerId: MarkerId("volunteer"),
+              position: volunteerLocation!,
+              infoWindow: InfoWindow(title: "Volunteer"),
+              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+            ),
+          );
+
+          // ✅ Update the route between volunteer and user
+          _updateRoute();
+        });
       }
-    }
+    });
+  }
+
+  /// ✅ Update the polyline (route) from volunteer to user
+  void _updateRoute() {
+    if (userLocation == null || volunteerLocation == null) return;
+
+    setState(() {
+      polylines.clear();
+      polylines.add(
+        Polyline(
+          polylineId: PolylineId("route"),
+          points: [volunteerLocation!, userLocation!],
+          color: Colors.blue,
+          width: 5,
+        ),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    channel?.sink.close();
+    super.dispose();
   }
 
   /// ✅ Show Snackbar Message
@@ -147,28 +151,46 @@ class _SOSScreenState extends State<SOSScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('SOS App')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Press the button to send an SOS alert to your emergency contacts & volunteers.',
-              style: TextStyle(fontSize: 16),
-              textAlign: TextAlign.center,
+      body: Stack(
+        children: [
+          // ✅ Full-Screen Google Map
+          userLocation == null
+              ? Center(child: CircularProgressIndicator()) // Show loading if location is not fetched
+              : GoogleMap(
+                  initialCameraPosition: CameraPosition(target: userLocation!, zoom: 14),
+                  markers: markers,
+                  polylines: polylines,
+                  myLocationEnabled: true,
+                  onMapCreated: (controller) => mapController = controller,
+                ),
+
+          // ✅ Status Message at the Top
+          Positioned(
+            top: 20,
+            left: 20,
+            child: Container(
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
+              child: Text(statusMessage, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: isSendingSOS ? null : _sendSOS, // ✅ Disable button while sending
+          ),
+
+          // ✅ SOS Button at Bottom
+          Positioned(
+            bottom: 30,
+            left: 20,
+            right: 20,
+            child: ElevatedButton(
+              onPressed: isSendingSOS ? null : _sendSOS,
               style: ElevatedButton.styleFrom(
                 backgroundColor: isSendingSOS ? Colors.grey : Colors.red,
-                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                padding: EdgeInsets.symmetric(vertical: 15),
               ),
-              child: Text(isSendingSOS ? "Sending..." : "Send SOS",
-                  style: TextStyle(fontSize: 18, color: Colors.white)),
+              child: Text(isSendingSOS ? "Sending..." : "🚨 Send SOS",
+                  style: TextStyle(fontSize: 20, color: Colors.white)),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

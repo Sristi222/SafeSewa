@@ -28,4 +28,29 @@ router.post("/sos", async (req, res) => {
   }
 });
 
+router.post("/sos/accept", async (req, res) => {
+  try {
+    const { sosId, volunteerId, latitude, longitude } = req.body;
+    const sos = await SOS.findByIdAndUpdate(
+      sosId,
+      { accepted: true, volunteerId, volunteerLocation: { latitude, longitude } },
+      { new: true }
+    );
+
+    if (!sos) return res.status(404).json({ success: false, message: "SOS not found" });
+
+    // ✅ Notify user that a volunteer has accepted
+    io.emit(`sos-accepted-${sos.userId}`, {
+      message: "Volunteer is coming!",
+      volunteerLatitude: latitude,
+      volunteerLongitude: longitude,
+    });
+
+    res.status(200).json({ success: true, message: "SOS Accepted", sos });
+  } catch (error) {
+    console.error("❌ Error accepting SOS:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 module.exports = router;

@@ -93,6 +93,19 @@ class _SignInPageState extends State<SignInPage> {
       await prefs.setString("userId", userId);
       await prefs.setString("role", role);
 
+      // 🔍 Verify storage to debug missing userId issues
+      String? storedUserId = prefs.getString("userId");
+      String? storedRole = prefs.getString("role");
+      print("🔹 DEBUG: Stored Volunteer ID: $storedUserId, Role: $storedRole");
+
+      if (storedUserId == null) {
+        print("❌ ERROR: Volunteer ID is not properly stored!");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("❌ Login error: User ID not stored! Try again.")),
+        );
+        return;
+      }
+
       // ✅ Navigate to appropriate dashboard based on role
       Widget nextPage;
       if (role == "Volunteer") {
