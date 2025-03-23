@@ -7,16 +7,14 @@ import 'package:http/http.dart' as http;
 class SignupPage extends StatelessWidget {
   SignupPage({super.key});
 
-  // Controllers for text fields
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController(); // Added phone field
+  final TextEditingController phoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
 
-  String selectedRole = 'User'; // Default role selection
+  String selectedRole = 'User';
 
-  // ✅ Register Function
   Future<void> registerUser(BuildContext context) async {
     final username = usernameController.text.trim();
     final email = emailController.text.trim();
@@ -40,21 +38,21 @@ class SignupPage extends StatelessWidget {
 
     try {
       final response = await http.post(
-        Uri.parse(registration), // Backend registration API
+        Uri.parse(registration),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "username": username,
           "email": email,
           "phone": phone,
           "password": password,
-          "role": selectedRole // ✅ Send role selection
+          "role": selectedRole
         }),
       );
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
         final bool isSuccess = jsonResponse['status'] ?? false;
-        final String? userId = jsonResponse['userId']; // ✅ Get userId
+        final String? userId = jsonResponse['userId'];
 
         if (!isSuccess || userId == null) {
           print("❌ ERROR: Registration failed!");
@@ -66,7 +64,6 @@ class SignupPage extends StatelessWidget {
 
         print("✅ Registration Successful! User ID: $userId");
 
-        // ✅ Store userId in SharedPreferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString("userId", userId);
 
@@ -74,7 +71,7 @@ class SignupPage extends StatelessWidget {
           const SnackBar(content: Text("Signup successful! Please log in.")),
         );
 
-        Navigator.pop(context); // ✅ Navigate to login
+        Navigator.pop(context);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Signup failed. Please try again.")),
@@ -91,90 +88,178 @@ class SignupPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Signup Page")),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                "Create Account",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: selectedRole,
-                items: ["User", "Volunteer"].map((role) {
-                  return DropdownMenuItem(value: role, child: Text(role));
-                }).toList(),
-                onChanged: (newValue) {
-                  selectedRole = newValue!;
-                },
-                decoration: InputDecoration(labelText: "Register as"),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: usernameController,
-                decoration: InputDecoration(
-                  labelText: "Username",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      backgroundColor: const Color(0xFFF9F9FF),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Container(
+            padding: const EdgeInsets.all(24.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: emailController,
-                decoration: InputDecoration(
-                  labelText: "Email",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: phoneController, // ✅ Added phone field
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  labelText: "Phone Number",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: passwordController,
-                decoration: InputDecoration(
-                  labelText: "Password",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                obscureText: true,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: confirmPasswordController,
-                decoration: InputDecoration(
-                  labelText: "Confirm Password",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                obscureText: true,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => registerUser(context), // ✅ Call register function
-                child: const Text("Signup"),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Already have an account?"),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context); // ✅ Navigate back to login
-                    },
-                    child: const Text("Login"),
+              ],
+            ),
+            child: Column(
+              children: [
+                const Text(
+                  "Create Account",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1D2AFF),
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(height: 24),
+                DropdownButtonFormField<String>(
+                  value: selectedRole,
+                  items: ["User", "Volunteer"].map((role) {
+                    return DropdownMenuItem(value: role, child: Text(role));
+                  }).toList(),
+                  onChanged: (newValue) {
+                    selectedRole = newValue!;
+                  },
+                  decoration: InputDecoration(
+                    labelText: "Register as",
+                    filled: true,
+                    fillColor: const Color(0xFFF1F4FF),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: usernameController,
+                  decoration: InputDecoration(
+                    hintText: "Username",
+                    filled: true,
+                    fillColor: const Color(0xFFF1F4FF),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(
+                    hintText: "Email",
+                    filled: true,
+                    fillColor: const Color(0xFFF1F4FF),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    hintText: "Phone Number",
+                    filled: true,
+                    fillColor: const Color(0xFFF1F4FF),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: passwordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    hintText: "Password",
+                    filled: true,
+                    fillColor: const Color(0xFFF1F4FF),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: confirmPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    hintText: "Confirm Password",
+                    filled: true,
+                    fillColor: const Color(0xFFF1F4FF),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () => registerUser(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1D2AFF),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 3,
+                    ),
+                    child: const Text("Signup", style: TextStyle(fontSize: 16, color: Colors.white)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("Already have an account?"),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text(
+                        "Login",
+                        style: TextStyle(color: Color(0xFF1D2AFF)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

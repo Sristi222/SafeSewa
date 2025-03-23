@@ -2,12 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart'; // ✅ Location package for real-time tracking
-import 'package:geolocator/geolocator.dart'; // ✅ To calculate distance
+import 'package:geolocator/geolocator.dart'; // ✅ To calculate distance Route connection needed
 
 class SOSMapScreen extends StatefulWidget {
   final Map<String, dynamic> alert;
 
-  SOSMapScreen({required this.alert});
+  SOSMapScreen({required this.alert, required String volunteerId});
 
   @override
   _SOSMapScreenState createState() => _SOSMapScreenState();

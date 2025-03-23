@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:frontend/config.dart'; // ✅ Keep using login from config.dart
+import 'package:frontend/config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
-import 'dashboard.dart'; // Import Dashboard page
-import 'volunteer_dashboard.dart'; // Import Volunteer Dashboard page
-import 'admin_dashboard.dart'; // Import Admin Dashboard page
+import 'dashboard.dart';
+import 'volunteer_dashboard.dart';
+import 'admin_dashboard.dart';
+import 'forgot_password.dart';
+import 'registration.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
@@ -17,7 +19,7 @@ class SignInPage extends StatefulWidget {
 class _SignInPageState extends State<SignInPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  bool isLoading = false; // ✅ Loading state
+  bool isLoading = false;
 
   Future<void> loginUser(BuildContext context) async {
     final email = emailController.text.trim();
@@ -31,17 +33,15 @@ class _SignInPageState extends State<SignInPage> {
     }
 
     setState(() {
-      isLoading = true; // ✅ Show loading spinner
+      isLoading = true;
     });
 
     try {
       final response = await http.post(
-        Uri.parse(login), // ✅ Keep existing API from config.dart
+        Uri.parse(login),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"email": email, "password": password}),
       );
-
-      print("📩 API Response: ${response.statusCode} - ${response.body}");
 
       final jsonResponse = jsonDecode(response.body);
       final bool isSuccess = jsonResponse['status'] ?? false;
@@ -51,12 +51,10 @@ class _SignInPageState extends State<SignInPage> {
       final String? errorMessage = jsonResponse['error'];
 
       if (!isSuccess) {
-        setState(() {
-          isLoading = false; // ✅ Hide loading indicator
-        });
+        setState(() => isLoading = false);
 
-        // 🚨 Handle Volunteer Not Approved Case
-        if (role == "Volunteer" && errorMessage == "Your account is pending approval by the Admin.") {
+        if (role == "Volunteer" &&
+            errorMessage == "Your account is pending approval by the Admin.") {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("⏳ Your account is pending admin approval."),
@@ -66,47 +64,27 @@ class _SignInPageState extends State<SignInPage> {
           return;
         }
 
-        // 🚨 General login failure case
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage ?? "❌ Login failed. Please check your credentials.")),
+          SnackBar(
+              content: Text(
+                  errorMessage ?? "❌ Login failed. Please check credentials.")),
         );
         return;
       }
 
       if (userId == null || token == null || role == null) {
-        setState(() {
-          isLoading = false;
-        });
-
-        print("❌ ERROR: User ID, Token, or Role is missing!");
+        setState(() => isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("❌ Login failed. Please try again.")),
         );
         return;
       }
 
-      print("✅ Login Successful! User ID: $userId, Role: $role");
-
-      // ✅ Store token & userId securely
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString("token", token);
       await prefs.setString("userId", userId);
       await prefs.setString("role", role);
 
-      // 🔍 Verify storage to debug missing userId issues
-      String? storedUserId = prefs.getString("userId");
-      String? storedRole = prefs.getString("role");
-      print("🔹 DEBUG: Stored Volunteer ID: $storedUserId, Role: $storedRole");
-
-      if (storedUserId == null) {
-        print("❌ ERROR: Volunteer ID is not properly stored!");
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("❌ Login error: User ID not stored! Try again.")),
-        );
-        return;
-      }
-
-      // ✅ Navigate to appropriate dashboard based on role
       Widget nextPage;
       if (role == "Volunteer") {
         nextPage = VolunteerDashboard(token: token, userId: userId);
@@ -116,21 +94,13 @@ class _SignInPageState extends State<SignInPage> {
         nextPage = Dashboard(token: token, userId: userId);
       }
 
-      setState(() {
-        isLoading = false; // ✅ Hide loading indicator
-      });
-
+      setState(() => isLoading = false);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => nextPage),
       );
     } catch (error) {
-      print("❌ Error during login: $error");
-
-      setState(() {
-        isLoading = false;
-      });
-
+      setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("❌ Failed to connect to the server.")),
       );
@@ -140,45 +110,138 @@ class _SignInPageState extends State<SignInPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Login")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              "Sign In",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: emailController,
-              decoration: InputDecoration(
-                labelText: "Email",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+      backgroundColor: const Color(0xFFF9F9FF),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Container(
+            padding: const EdgeInsets.all(24.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
                 ),
-              ),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              decoration: InputDecoration(
-                labelText: "Password",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              obscureText: true,
-            ),
-            const SizedBox(height: 16),
-            isLoading
-                ? const CircularProgressIndicator() // ✅ Show loading indicator while logging in
-                : ElevatedButton(
-                    onPressed: () => loginUser(context),
-                    child: const Text("Login"),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "Login here",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1D2AFF),
                   ),
-          ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  "Welcome back you’ve been missed!",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(
+                    hintText: "Email",
+                    filled: true,
+                    fillColor: const Color(0xFFF1F4FF),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: passwordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    hintText: "Password",
+                    filled: true,
+                    fillColor: const Color(0xFFF1F4FF),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => ForgotPasswordScreen()),
+                      );
+                    },
+                    child: const Text(
+                      "Forgot your password?",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF1D2AFF),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : () => loginUser(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1D2AFF),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 3,
+                    ),
+                    child: isLoading
+                        ? const CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2)
+                        : const Text(
+                            "Sign in",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Color.fromARGB(221, 255, 255, 255),
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => SignupPage()),
+                    );
+                  },
+                  child: const Text(
+                    "Create new account",
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                )
+              ],
+            ),
+          ),
         ),
       ),
     );

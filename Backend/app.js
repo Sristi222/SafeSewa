@@ -7,6 +7,7 @@ const postRoutes = require('./routers/postRoutes');
 const connectDB = require('./config/dbpost');
 const { createAdminIfNotExists } = require("./model/user.model");
 const userRouter = require("./routers/user.router");
+const path = require('path');
 // Import routers
 
 
@@ -42,9 +43,10 @@ app.use(bodyParser.json());
 
 // Connect to MongoDB
 connectDB();
-
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Routes
 app.use('/posts', postRoutes);
+
 
 app.use("/api/sos", sosRoutes); // ✅ Register SOS routes
 

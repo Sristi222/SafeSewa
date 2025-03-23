@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:geolocator/geolocator.dart';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SOSScreen extends StatefulWidget {
   final String userId; // ✅ User ID required for backend
@@ -23,11 +25,19 @@ class _SOSScreenState extends State<SOSScreen> {
   IOWebSocketChannel? channel;
   Set<Marker> markers = {};
   Set<Polyline> polylines = {}; // ✅ Route from volunteer to user
+  List<String> emergencyContacts = []; // ✅ Emergency Contacts
 
   @override
   void initState() {
     super.initState();
     _getUserLocation();
+    _loadEmergencyNumbers(); // ✅ Load emergency contacts on init
+  }
+
+  /// ✅ Load Emergency Contacts from SharedPreferences
+  Future<void> _loadEmergencyNumbers() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    emergencyContacts = prefs.getStringList('emergency_numbers') ?? [];
   }
 
   /// ✅ Get User's Current Location
@@ -58,7 +68,7 @@ class _SOSScreenState extends State<SOSScreen> {
     });
   }
 
-  /// ✅ Send SOS Alert to Volunteers
+  /// ✅ Send SOS Alert to Volunteers & SMS to Contacts
   Future<void> _sendSOS() async {
     if (isSendingSOS || userLocation == null) return;
 
@@ -69,7 +79,7 @@ class _SOSScreenState extends State<SOSScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse("http://192.168.1.4:3000/api/sos"),
+        Uri.parse("http://100.64.204.3:3000/api/sos"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "userId": widget.userId,
@@ -80,7 +90,8 @@ class _SOSScreenState extends State<SOSScreen> {
 
       if (response.statusCode == 201) {
         _showSnackbar("✅ SOS Sent! Volunteers Notified.");
-        _listenForVolunteerUpdates(); // ✅ Start listening for updates
+        _sendSMS(); // ✅ Send SMS after successful backend call
+        _listenForVolunteerUpdates();
       } else {
         _showSnackbar("❌ Failed to notify volunteers.");
       }
@@ -93,9 +104,39 @@ class _SOSScreenState extends State<SOSScreen> {
     });
   }
 
+  /// ✅ Send SMS to Emergency Contacts with Location
+  Future<void> _sendSMS() async {
+    if (emergencyContacts.isEmpty) {
+      _showSnackbar("⚠️ No emergency contacts found.");
+      return;
+    }
+
+    if (userLocation == null) return;
+
+    String latitude = userLocation!.latitude.toString();
+    String longitude = userLocation!.longitude.toString();
+
+    String message = Uri.encodeComponent(
+      "🚨 SOS ALERT! 🚨\nI need immediate help!\n📍 My location:\n"
+      "Latitude: $latitude\nLongitude: $longitude\n"
+      "🔗 https://www.google.com/maps?q=$latitude,$longitude"
+    );
+
+    // ✅ Join all numbers into a single comma-separated string
+    String recipients = emergencyContacts.join(',');
+
+    String smsUrl = "sms:$recipients?body=$message";
+
+    if (await canLaunch(smsUrl)) {
+      await launch(smsUrl);
+    } else {
+      _showSnackbar("❌ Failed to launch SMS app.");
+    }
+  }
+
   /// ✅ Listen for Volunteer Location Updates via WebSocket
   void _listenForVolunteerUpdates() {
-    channel = IOWebSocketChannel.connect("ws://192.168.1.4:3000");
+    channel = IOWebSocketChannel.connect("ws://100.64.204.3:3000");
     channel!.stream.listen((message) {
       final data = jsonDecode(message);
 
@@ -155,7 +196,7 @@ class _SOSScreenState extends State<SOSScreen> {
         children: [
           // ✅ Full-Screen Google Map
           userLocation == null
-              ? Center(child: CircularProgressIndicator()) // Show loading if location is not fetched
+              ? Center(child: CircularProgressIndicator())
               : GoogleMap(
                   initialCameraPosition: CameraPosition(target: userLocation!, zoom: 14),
                   markers: markers,
@@ -186,8 +227,10 @@ class _SOSScreenState extends State<SOSScreen> {
                 backgroundColor: isSendingSOS ? Colors.grey : Colors.red,
                 padding: EdgeInsets.symmetric(vertical: 15),
               ),
-              child: Text(isSendingSOS ? "Sending..." : "🚨 Send SOS",
-                  style: TextStyle(fontSize: 20, color: Colors.white)),
+              child: Text(
+                isSendingSOS ? "Sending..." : "🚨 Send SOS",
+                style: TextStyle(fontSize: 20, color: Colors.white),
+              ),
             ),
           ),
         ],

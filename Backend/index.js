@@ -15,6 +15,29 @@ const connectToMongo = require("./config/dbdonation");
 const sosRouter = require("./routers/sos.router");
 const { Server } = require("socket.io");
 const sosRoutes = require("./routers/sosRoutes");
+const { initSocket } = require('./sockets/alertSocket');
+const alertRoutes = require('./routers/alerts');
+const locationRoutes = require('./routers/locations');
+const { startEarthquakePolling } = require('./cron/earthquakePoller');
+const { startFloodPolling } = require('./cron/floodPoller');
+const connectDB = require('./config/db');
+
+const server = http.createServer(app);
+
+
+
+
+
+// Routes
+app.use('/api/alerts', alertRoutes);
+app.use('/api/locations', locationRoutes);
+
+// Init WebSocket
+initSocket(server);
+
+// Start Pollers
+startEarthquakePolling();
+startFloodPolling();
 
 // Create HTTP server
 
@@ -25,7 +48,6 @@ const { SOS } = require("./model/SOS");
 
 // Initialize Express & HTTP Server
 
-const server = http.createServer(app);
 
 // ✅ Initialize WebSocket before exporting
 const io = new Server(server, {
@@ -114,8 +136,13 @@ mongoose
   });
   // **Volunteer accepts the SOS**
 app.post("/api/sos/accept", async (req, res) => {
+  try {
     const { volunteerId, sosId, latitude, longitude } = req.body;
-  
+
+    if (!sosId || !volunteerId || latitude == null || longitude == null) {
+      return res.status(400).json({ success: false, message: "Missing required fields." });
+    }
+
     const sos = await SOS.findByIdAndUpdate(
       sosId,
       {
@@ -123,16 +150,23 @@ app.post("/api/sos/accept", async (req, res) => {
         volunteerLatitude: latitude,
         volunteerLongitude: longitude,
         accepted: true,
-        updatedAt: Date.now(),
+        updatedAt: new Date(),
       },
       { new: true }
     );
-  
-    // Notify user via WebSocket
+
+    if (!sos) {
+      return res.status(404).json({ success: false, message: "SOS not found" });
+    }
+
     io.emit("volunteerAccepted", sos);
-  
     res.status(200).json({ success: true, message: "Volunteer Accepted!", sos });
-  });
+  } catch (err) {
+    console.error("❌ Error in /api/sos/accept:", err);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+});
+
   
   // **Periodically update user & volunteer locations**
   app.post("/api/sos/update-location", async (req, res) => {
@@ -437,5 +471,5 @@ app.listen(port, '0.0.0.0', () => {
     console.log(`Server running on:`);
     console.log(` - Local: http://localhost:${port}`);
     console.log(` - Network: http://${localIp}:${port}`);
-    console.log(`🚀 Server running on ws://192.168.1.4:${port}`);
+    console.log(`🚀 Server running on ws://100.64.204.3:${port}`);
 });

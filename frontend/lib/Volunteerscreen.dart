@@ -14,7 +14,7 @@ class _VolunteerScreenState extends State<VolunteerScreen> {
   late IOWebSocketChannel channel;
   List<Map<String, dynamic>> sosAlerts = [];
   bool isConnected = false;
-  final String backendUrl = "http://192.168.1.4:3000"; // Change this to your backend URL
+  final String backendUrl = "http://100.64.204.3:3000"; // Change this to your backend URL
 
   @override
   void initState() {
@@ -45,7 +45,7 @@ class _VolunteerScreenState extends State<VolunteerScreen> {
   /// ✅ Connect to WebSocket for real-time SOS alerts
   void _connectToWebSocket() {
     try {
-      channel = IOWebSocketChannel.connect("ws://192.168.1.4:3000");
+      channel = IOWebSocketChannel.connect("ws://100.64.204.3:3000");
       setState(() => isConnected = true);
 
       channel.stream.listen(
@@ -94,7 +94,7 @@ class _VolunteerScreenState extends State<VolunteerScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SOSMapScreen(alert: alert),
+        builder: (context) => SOSMapScreen(alert: alert, volunteerId: '',),
       ),
     );
   }
