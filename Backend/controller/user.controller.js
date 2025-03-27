@@ -1,3 +1,4 @@
+const { User } = require("../model/user.model");
 const UserServices = require("../services/user.services");
 
 exports.register = async (req, res, next) => {
@@ -102,4 +103,14 @@ exports.approveVolunteer = async (req, res) => {
 exports.getVolunteers = async (req, res) => {
   const volunteers = await UserServices.getPendingVolunteers();
   res.json(volunteers);
+};
+
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({}, "-password"); // exclude passwords
+    res.json(users);
+  } catch (error) {
+    console.error("❌ Error fetching users:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 };

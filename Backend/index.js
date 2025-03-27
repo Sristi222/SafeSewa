@@ -28,6 +28,7 @@ const server = http.createServer(app);
 
 
 
+
 // Routes
 app.use('/api/alerts', alertRoutes);
 app.use('/api/locations', locationRoutes);
@@ -471,5 +472,5 @@ app.listen(port, '0.0.0.0', () => {
     console.log(`Server running on:`);
     console.log(` - Local: http://localhost:${port}`);
     console.log(` - Network: http://${localIp}:${port}`);
-    console.log(`🚀 Server running on ws://100.64.204.3:${port}`);
+    console.log(`🚀 Server running on ws://192.168.1.6:${port}`);
 });

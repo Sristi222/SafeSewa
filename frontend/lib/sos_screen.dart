@@ -79,7 +79,7 @@ class _SOSScreenState extends State<SOSScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse("http://100.64.204.3:3000/api/sos"),
+        Uri.parse("http://192.168.1.6:3000/api/sos"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "userId": widget.userId,
@@ -136,7 +136,7 @@ class _SOSScreenState extends State<SOSScreen> {
 
   /// ✅ Listen for Volunteer Location Updates via WebSocket
   void _listenForVolunteerUpdates() {
-    channel = IOWebSocketChannel.connect("ws://100.64.204.3:3000");
+    channel = IOWebSocketChannel.connect("ws://192.168.1.6:3000");
     channel!.stream.listen((message) {
       final data = jsonDecode(message);
 

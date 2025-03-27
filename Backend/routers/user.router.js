@@ -12,4 +12,7 @@ router.get("/volunteers/pending", UserController.getPendingVolunteers);
 router.put("/volunteers/approve/:id", UserController.approveVolunteer);
 router.put("/admin/approve/:id", UserController.approveVolunteer);
 
+// Admin: Get all users
+router.get("/users", UserController.getAllUsers);
+
 module.exports = router;
