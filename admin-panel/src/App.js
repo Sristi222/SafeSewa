@@ -5,6 +5,8 @@ import Users from './pages/Users';
 import Volunteers from './pages/Volunteers';
 import Donations from './pages/Donation';
 import SOSAlerts from './pages/SOSAlerts';
+import AddEvent from './pages/AddEvent';
+
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 
@@ -30,6 +32,9 @@ function App() {
             <li className="nav-item">
               <Link className="nav-link text-white" to="/sos-alerts">SOS Alerts</Link>
             </li>
+            <li className="nav-item">
+              <Link className="nav-link text-white" to="/addevent">Add Events</Link>
+            </li>
           </ul>
         </div>
         <div className="p-4 flex-grow-1">
@@ -39,6 +44,8 @@ function App() {
             <Route path="/volunteers" element={<Volunteers />} />
             <Route path="/donations" element={<Donations />} />
             <Route path="/sos-alerts" element={<SOSAlerts />} />
+            <Route path="/addevent" element={<AddEvent />} />
+
           </Routes>
         </div>
       </div>

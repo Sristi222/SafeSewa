@@ -21,11 +21,12 @@ const locationRoutes = require('./routers/locations');
 const { startEarthquakePolling } = require('./cron/earthquakePoller');
 const { startFloodPolling } = require('./cron/floodPoller');
 const connectDB = require('./config/db');
+const eventRoutes = require('./routers/event');
 
 const server = http.createServer(app);
 
 
-
+app.use('/api/events', eventRoutes);
 
 
 
@@ -294,6 +295,16 @@ app.post("/fundraise", async (req, res) => {
         console.error("❌ Error Saving Fundraiser:", error);
         res.status(500).json({ success: false, message: "Error saving fundraiser", error });
     }
+});
+
+app.get("/donations", async (req, res) => {
+  try {
+    const donations = await Donation.find().sort({ createdAt: -1 }); // optional: newest first
+    res.json(donations);
+  } catch (error) {
+    console.error("❌ Error fetching donations:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 // ✅ Get Pending Fundraisers
