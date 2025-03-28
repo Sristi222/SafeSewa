@@ -22,6 +22,7 @@ const { startEarthquakePolling } = require('./cron/earthquakePoller');
 const { startFloodPolling } = require('./cron/floodPoller');
 const connectDB = require('./config/db');
 const eventRoutes = require('./routers/event');
+const { User } = require('./model/user.model');
 
 const server = http.createServer(app);
 
@@ -381,6 +382,28 @@ app.get('/approved-fundraisers', async (req, res) => {
       res.status(500).send({ message: 'Internal server error' });
     }
   });
+
+  // routes/admin.js
+  app.get('/api/admin/stats', async (req, res) => {
+    try {
+      const totalUsers = await User.countDocuments();
+      const pendingVolunteers = await User.countDocuments({ role: 'Volunteer', isApproved: false });
+      const pendingFundraisers = 0; // Placeholder if you don’t have it
+      const sosAlerts = 0; // Placeholder if no SOS model
+  
+      res.json({
+        totalUsers,
+        pendingVolunteers,
+        pendingFundraisers,
+        sosAlerts,
+      });
+    } catch (err) {
+      console.error('🔥 Error fetching stats:', err.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  
+
 
   
   

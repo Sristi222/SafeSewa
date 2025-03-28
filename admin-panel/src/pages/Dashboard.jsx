@@ -1,59 +1,69 @@
 // src/pages/Dashboard.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Card, Row, Col, Container } from 'react-bootstrap';
+import { Card, Row, Col, Container, Spinner } from 'react-bootstrap';
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    pendingVolunteers: 0,
-    pendingFundraisers: 0,
-    sosAlerts: 0,
-  });
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     axios.get('http://localhost:3000/api/admin/stats')
-      .then(res => setStats(res.data))
-      .catch(err => console.error('Error fetching stats', err));
+      .then(res => {
+        setStats(res.data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching stats', err);
+        setLoading(false);
+      });
   }, []);
+
+  const cards = [
+    {
+      title: "Total Users",
+      value: stats?.totalUsers || 0,
+      bg: "primary",
+    },
+    {
+      title: "Pending Volunteers",
+      value: stats?.pendingVolunteers || 0,
+      bg: "success",
+    },
+    {
+      title: "Pending Fundraisers",
+      value: stats?.pendingFundraisers || 0,
+      bg: "warning",
+    },
+    {
+      title: "SOS Alerts",
+      value: stats?.sosAlerts || 0,
+      bg: "danger",
+    },
+  ];
 
   return (
     <Container className="my-4">
-      <h2 className="mb-4">Admin Dashboard</h2>
-      <Row className="g-4">
-        <Col md={3}>
-          <Card className="text-white bg-primary">
-            <Card.Body>
-              <Card.Title>Total Users</Card.Title>
-              <Card.Text>{stats.totalUsers}</Card.Text>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={3}>
-          <Card className="text-white bg-success">
-            <Card.Body>
-              <Card.Title>Pending Volunteers</Card.Title>
-              <Card.Text>{stats.pendingVolunteers}</Card.Text>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={3}>
-          <Card className="text-white bg-warning">
-            <Card.Body>
-              <Card.Title>Pending Fundraisers</Card.Title>
-              <Card.Text>{stats.pendingFundraisers}</Card.Text>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={3}>
-          <Card className="text-white bg-danger">
-            <Card.Body>
-              <Card.Title>SOS Alerts</Card.Title>
-              <Card.Text>{stats.sosAlerts}</Card.Text>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+      <h2 className="mb-4">📊 Admin Dashboard</h2>
+      {loading ? (
+        <div className="text-center mt-5">
+          <Spinner animation="border" variant="primary" />
+          <p className="mt-2">Loading dashboard...</p>
+        </div>
+      ) : (
+        <Row className="g-4">
+          {cards.map((card, index) => (
+            <Col md={3} sm={6} key={index}>
+              <Card className={`text-white bg-${card.bg} shadow`}>
+                <Card.Body>
+                  <Card.Title>{card.title}</Card.Title>
+                  <h2>{card.value}</h2>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
     </Container>
   );
 };
