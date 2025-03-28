@@ -483,5 +483,5 @@ app.listen(port, '0.0.0.0', () => {
     console.log(`Server running on:`);
     console.log(` - Local: http://localhost:${port}`);
     console.log(` - Network: http://${localIp}:${port}`);
-    console.log(`🚀 Server running on ws://192.168.1.6:${port}`);
+    console.log(`🚀 Server running on ws://192.168.1.9:${port}`);
 });

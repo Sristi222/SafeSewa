@@ -8,6 +8,7 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, required: true, minlength: 6 },
   role: { type: String, enum: ["User", "Volunteer", "Admin"], default: "User" },
   isApproved: { type: Boolean, default: false }, // Only applies to volunteers
+  enrolledEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Event' }]
 });
 
 // Hash Password before saving (except for Admin)

@@ -14,7 +14,7 @@ class _VolunteerScreenState extends State<VolunteerScreen> {
   late IOWebSocketChannel channel;
   List<Map<String, dynamic>> sosAlerts = [];
   bool isConnected = false;
-  final String backendUrl = "http://192.168.1.6:3000"; // Change this to your backend URL
+  final String backendUrl = "http://192.168.1.9:3000"; // Change this to your backend URL
 
   @override
   void initState() {

@@ -9,7 +9,7 @@ const eventSchema = new mongoose.Schema({
   time: String,
   spots: Number,
   description: String,
-  enrolled: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Volunteer' }],
+  enrolled: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
 });
 
 module.exports = mongoose.model('Event', eventSchema);
