@@ -16,7 +16,6 @@ const sosRouter = require("./routers/sos.router");
 const { Server } = require("socket.io");
 const sosRoutes = require("./routers/sosRoutes");
 const { initSocket } = require('./sockets/alertSocket');
-const alertRoutes = require('./routers/alerts');
 const locationRoutes = require('./routers/locations');
 const { startEarthquakePolling } = require('./cron/earthquakePoller');
 const { startFloodPolling } = require('./cron/floodPoller');
@@ -30,10 +29,20 @@ const server = http.createServer(app);
 app.use('/api/events', eventRoutes);
 
 
-
-// Routes
+const alertRoutes = require('./routers/alerts');
 app.use('/api/alerts', alertRoutes);
-app.use('/api/locations', locationRoutes);
+
+const scrapeEarthquakeData = require('./scrape/seismoNepalScraper');
+
+scrapeEarthquakeData(); // run immediately
+
+setInterval(() => {
+  console.log('⏰ Running scheduled earthquake scrape...');
+  scrapeEarthquakeData();
+}, 15 * 60 * 1000);
+
+
+
 
 // Init WebSocket
 initSocket(server);

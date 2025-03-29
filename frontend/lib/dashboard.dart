@@ -10,6 +10,8 @@ import '../services/api_service.dart';
 import 'fundraiser_screen.dart';
 import './fundraiser_form_screen.dart';
 import './disaster_map.dart';
+import './earthquakemap_screen.dart';
+
 
 
 
@@ -215,6 +217,9 @@ class _DashboardState extends State<Dashboard> {
                   }),
                   _buildItemTile(Icons.add_alert, "Disaster Precaution", () {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen()));
+                  }),
+                  _buildItemTile(Icons.add_alert, "Live Dashboard", () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => EarthquakeMapScreen()));
                   }),
                 ],
               ),
