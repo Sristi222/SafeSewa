@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 
 class HelplinePage extends StatefulWidget {
@@ -7,34 +9,41 @@ class HelplinePage extends StatefulWidget {
 }
 
 class _HelplinePageState extends State<HelplinePage> {
-  final List<Map<String, String>> helplineNumbers = [
-    {'title': 'Police Emergency', 'number': '100'},
-    {'title': 'Ambulance', 'number': '102'},
-    {'title': 'Fire Brigade', 'number': '101'},
-    {'title': 'Nepal Red Cross', 'number': '4228094'},
-    {'title': 'Child Helpline', 'number': '1098'},
-    {'title': 'Women Helpline', 'number': '1145'},
-    {'title': 'Traffic Police', 'number': '103'},
-    {'title': 'Tourist Police', 'number': '1144'},
-    {'title': 'Nepal Telecom', 'number': '1498'},
-    {'title': 'Electricity Emergency', 'number': '1150'},
-    {'title': 'Electricity Emergency', 'number': '9841370926'},
-  ];
-
-  List<Map<String, String>> filteredNumbers = [];
+  List<dynamic> helplines = [];
+  List<dynamic> filtered = [];
   String searchQuery = '';
+
+  final String apiUrl = 'http://192.168.1.5:3000/api/helplines'; // ⚠️ Update this
 
   @override
   void initState() {
     super.initState();
-    filteredNumbers = helplineNumbers;
+    fetchHelplines();
+  }
+
+  Future<void> fetchHelplines() async {
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        setState(() {
+          helplines = data;
+          filtered = data;
+        });
+      } else {
+        print("⚠️ Failed to load helplines");
+      }
+    } catch (e) {
+      print("❌ Error fetching helplines: $e");
+    }
   }
 
   void _filterNumbers(String query) {
     setState(() {
       searchQuery = query;
-      filteredNumbers = helplineNumbers
-          .where((item) => item['title']!.toLowerCase().contains(query.toLowerCase()))
+      filtered = helplines
+          .where((item) =>
+              item['title'].toLowerCase().contains(query.toLowerCase()))
           .toList();
     });
   }
@@ -80,12 +89,12 @@ class _HelplinePageState extends State<HelplinePage> {
             ),
             const SizedBox(height: 10),
             Expanded(
-              child: filteredNumbers.isEmpty
+              child: filtered.isEmpty
                   ? const Center(child: Text("No matches found."))
                   : ListView.builder(
-                      itemCount: filteredNumbers.length,
+                      itemCount: filtered.length,
                       itemBuilder: (context, index) {
-                        final item = filteredNumbers[index];
+                        final item = filtered[index];
                         return Container(
                           margin: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
@@ -103,13 +112,13 @@ class _HelplinePageState extends State<HelplinePage> {
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                             leading: const Icon(Icons.local_phone, color: Colors.deepPurple),
                             title: Text(
-                              item['title']!,
+                              item['title'] ?? '',
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
-                            subtitle: Text(item['number']!),
+                            subtitle: Text(item['number'] ?? ''),
                             trailing: IconButton(
                               icon: const Icon(Icons.call, color: Colors.green),
-                              onPressed: () => _makePhoneCall(item['number']!),
+                              onPressed: () => _makePhoneCall(item['number']),
                             ),
                           ),
                         );

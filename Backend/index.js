@@ -28,6 +28,9 @@ const alertRoutes = require('./routers/alerts');
 const disasterRoutes = require('./routers/disaster');
 const scrapeEarthquakeData = require('./scrape/seismoNepalScraper');
 const weatherRoute = require('./routers/weatherRoute');
+const helplineRoutes = require('./routers/helpline.routes');
+
+app.use("/api/helplines", helplineRoutes);
 
 app.use('/api/precautions', precautionRoutes);
 

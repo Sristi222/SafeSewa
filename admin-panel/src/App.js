@@ -7,7 +7,9 @@ import Donations from './pages/Donation';
 import SOSAlerts from './pages/SOSAlerts';
 import AddEvent from './pages/AddEvent';
 import EventSummary from './pages/EventSummary';
-import Precaution from './pages/DisasterPrecaution'
+import Precaution from './pages/DisasterPrecaution';
+import Helpline from './pages/HelplineAdmin';
+
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
@@ -43,6 +45,9 @@ function App() {
             <li className="nav-item">
               <Link className="nav-link text-white" to="/precaution">Precaution</Link>
             </li>
+            <li className="nav-item">
+              <Link className="nav-link text-white" to="/helpline">Helpline number</Link>
+            </li>
           </ul>
         </div>
         <div className="p-4 flex-grow-1">
@@ -55,6 +60,8 @@ function App() {
             <Route path="/addevent" element={<AddEvent />} />
             <Route path="/eventsummary" element={<EventSummary />} />
             <Route path="/precaution" element={<Precaution />} />
+            <Route path="/helpline" element={<Helpline />} />
+
 
           </Routes>
         </div>
