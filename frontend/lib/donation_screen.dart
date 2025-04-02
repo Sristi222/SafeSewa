@@ -4,23 +4,80 @@ import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 
 class DonationScreen extends StatefulWidget {
-  final String fundraiserId; // ✅ Ensure fundraiserId is passed
+  final String fundraiserId;
 
-  DonationScreen({required this.fundraiserId}); // ✅ Constructor update
+  DonationScreen({required this.fundraiserId});
 
   @override
   _DonationScreenState createState() => _DonationScreenState();
 }
 
-class _DonationScreenState extends State<DonationScreen> {
+class _DonationScreenState extends State<DonationScreen>
+    with WidgetsBindingObserver {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _donorNameController = TextEditingController();
 
-  String _selectedPaymentMethod = 'Khalti'; // Default payment method
+  final String backendUrl = "http://192.168.1.5:3000";
 
-  // ✅ Change the URL based on your testing environment
-  final String backendUrl = "http://100.64.199.99:3000"; // ✅ Change for actual server
-  // final String backendUrl = "http://10.0.2.2:3001"; // ✅ Use for Android Emulator
+  bool _openedKhalti = false;
+  String? _latestPidx;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _openedKhalti) {
+      _openedKhalti = false;
+
+      // ✅ Verify donation on return
+      verifyDonation().then((_) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text("🎉 Donation Completed"),
+            content: Text("Thank you for your donation!"),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // Close dialog
+                  Navigator.pop(context); // Go back to fundraiser screen
+                },
+                child: Text("OK"),
+              ),
+            ],
+          ),
+        );
+      });
+    }
+  }
+
+  Future<void> verifyDonation() async {
+    if (_latestPidx == null) return;
+
+    final verifyUrl = "$backendUrl/verify-donation?pidx=$_latestPidx";
+
+    try {
+      final response = await http.get(Uri.parse(verifyUrl));
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) {
+        print("✅ Donation verified successfully");
+      } else {
+        print("❌ Donation verification failed: ${data['message']}");
+      }
+    } catch (e) {
+      print("❌ Error verifying donation: $e");
+    }
+  }
 
   Future<void> _donate() async {
     String amount = _amountController.text.trim();
@@ -42,7 +99,7 @@ class _DonationScreenState extends State<DonationScreen> {
         body: jsonEncode({
           "donorName": donorName,
           "amount": int.parse(amount),
-          "fundraiserId": widget.fundraiserId, // ✅ Ensure fundraiserId is sent
+          "fundraiserId": widget.fundraiserId,
           "website_url": backendUrl,
         }),
       );
@@ -53,8 +110,11 @@ class _DonationScreenState extends State<DonationScreen> {
 
       if (response.statusCode == 200 && data['success']) {
         String khaltiUrl = data['payment']['payment_url'];
+        _latestPidx = data['payment']['pidx']; // ✅ Save pidx for verification
+
         if (await canLaunch(khaltiUrl)) {
-          await launch(khaltiUrl); // Open Khalti payment URL
+          _openedKhalti = true;
+          await launch(khaltiUrl);
         } else {
           throw 'Could not launch $khaltiUrl';
         }
@@ -64,7 +124,7 @@ class _DonationScreenState extends State<DonationScreen> {
         );
       }
     } catch (e) {
-      print("Error: $e");
+      print("❌ Error: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to connect to server")),
       );

@@ -4,7 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import Volunteers from './pages/Volunteers';
 import Donations from './pages/Donation';
-import SOSAlerts from './pages/SOSAlerts';
+import Donationsummary from './pages/DonationSummary';
 import AddEvent from './pages/AddEvent';
 import EventSummary from './pages/EventSummary';
 import Precaution from './pages/DisasterPrecaution';
@@ -34,7 +34,7 @@ function App() {
               <Link className="nav-link text-white" to="/donations">Approve Donations</Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link text-white" to="/sos-alerts"></Link>
+              <Link className="nav-link text-white" to="/donationsummary">Donation summary</Link>
             </li>
             <li className="nav-item">
               <Link className="nav-link text-white" to="/addevent">Add Events</Link>
@@ -56,7 +56,7 @@ function App() {
             <Route path="/users" element={<Users />} />
             <Route path="/volunteers" element={<Volunteers />} />
             <Route path="/donations" element={<Donations />} />
-            <Route path="/sos-alerts" element={<SOSAlerts />} />
+            <Route path="/donationsummary" element={<Donationsummary />} />
             <Route path="/addevent" element={<AddEvent />} />
             <Route path="/eventsummary" element={<EventSummary />} />
             <Route path="/precaution" element={<Precaution />} />

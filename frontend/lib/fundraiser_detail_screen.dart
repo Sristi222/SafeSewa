@@ -3,8 +3,11 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 
-
 class DonationScreen extends StatefulWidget {
+  final String fundraiserId; // ✅ Ensure fundraiserId is passed
+
+  DonationScreen({required this.fundraiserId}); // ✅ Constructor
+
   @override
   _DonationScreenState createState() => _DonationScreenState();
 }
@@ -12,12 +15,11 @@ class DonationScreen extends StatefulWidget {
 class _DonationScreenState extends State<DonationScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _donorNameController = TextEditingController();
-  
+
   String _selectedPaymentMethod = 'Khalti'; // Default payment method
 
-  // ✅ Change the URL based on your testing environment
-  final String backendUrl = "http://192.168.1.9:3000"; // ✅ Change for actual server
-  // final String backendUrl = "http://10.0.2.2:3001"; // ✅ Use for Android Emulator
+  // ✅ Change the URL based on your local or live server
+  final String backendUrl = "http://192.168.1.5:3000";
 
   Future<void> _donate() async {
     String amount = _amountController.text.trim();
@@ -39,6 +41,7 @@ class _DonationScreenState extends State<DonationScreen> {
         body: jsonEncode({
           "donorName": donorName,
           "amount": int.parse(amount),
+          "fundraiserId": widget.fundraiserId, // ✅ Pass the fundraiserId to backend
           "website_url": backendUrl,
         }),
       );
@@ -50,7 +53,7 @@ class _DonationScreenState extends State<DonationScreen> {
       if (response.statusCode == 200 && data['success']) {
         String khaltiUrl = data['payment']['payment_url'];
         if (await canLaunch(khaltiUrl)) {
-          await launch(khaltiUrl); // Open Khalti payment URL
+          await launch(khaltiUrl); // ✅ Open Khalti payment link
         } else {
           throw 'Could not launch $khaltiUrl';
         }

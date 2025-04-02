@@ -431,82 +431,116 @@ app.get('/approved-fundraisers', async (req, res) => {
   
   
   // ✅ Donation Routes with Khalti Integration
-app.post("/donate", async (req, res) => {
+  app.post("/donate", async (req, res) => {
     try {
-        const { donorName, amount, website_url } = req.body;
-
-        if (!donorName || !amount) {
-            return res.status(400).json({ success: false, message: "Donor name and amount are required" });
-        }
-
-        console.log("🔹 Received Donation Request:", { donorName, amount });
-
-        // ✅ Save donation in MongoDB with status "pending"
-        const donation = await Donation.create({
-            donorName,
-            amount: amount * 100, // Khalti requires paisa
-            paymentMethod: "khalti",
-            status: "pending"
-        });
-
-        console.log("✅ Donation Saved in DB:", donation);
-
-        // ✅ Convert `_id` to a string before sending to Khalti
-        const paymentInit = await initializeKhaltiPayment({
-            amount: amount * 100,
-            purchase_order_id: donation._id.toString(),
-            purchase_order_name: `Donation by ${donorName}`,
-            return_url: `${process.env.BACKEND_URI}/verify-donation`,
-            website_url,
-        });
-
-        console.log("✅ Payment Initialized:", paymentInit);
-
-        // ✅ Store `pidx` in the donation record for verification
-        await Donation.findByIdAndUpdate(donation._id, { pidx: paymentInit.pidx });
-
-        res.json({ success: true, payment: paymentInit });
+      const { donorName, amount, website_url, fundraiserId } = req.body;
+  
+      if (!donorName || !amount || !fundraiserId) {
+        return res.status(400).json({ success: false, message: "All fields required" });
+      }
+  
+      console.log("🔹 Received Donation Request:", { donorName, amount, fundraiserId });
+  
+      const donation = await Donation.create({
+        donorName,
+        amount: amount * 100,
+        paymentMethod: "khalti",
+        status: "pending",
+        fundraiserId, // ✅ NEW FIELD HERE
+      });
+  
+      console.log("✅ Donation Saved in DB:", donation);
+  
+      const paymentInit = await initializeKhaltiPayment({
+        amount: amount * 100,
+        purchase_order_id: donation._id.toString(),
+        purchase_order_name: `Donation by ${donorName}`,
+        return_url: `${process.env.BACKEND_URI}/verify-donation`,
+        website_url,
+      });
+  
+      await Donation.findByIdAndUpdate(donation._id, { pidx: paymentInit.pidx });
+  
+      res.json({ success: true, payment: paymentInit });
     } catch (error) {
-        console.error("❌ Error Initializing Payment:", error);
-        res.status(500).json({ success: false, message: "Error initializing payment", error });
+      console.error("❌ Error Initializing Payment:", error);
+      res.status(500).json({ success: false, message: "Error initializing payment", error });
     }
-});
+  });
+  
 
-// ✅ Verify Khalti Payment
-app.get("/verify-donation", async (req, res) => {
+
+  app.get("/verify-donation", async (req, res) => {
     try {
-        console.log("🔹 Received Payment Verification Request:", req.query);
-
-        // ✅ Verify Payment with Khalti
-        const paymentInfo = await verifyKhaltiPayment(req.query.pidx);
-        console.log("🔹 Khalti Payment Info:", paymentInfo);
-
-        if (!paymentInfo || paymentInfo.status !== "Completed") {
-            return res.status(400).json({ success: false, message: "Payment not completed", paymentInfo });
-        }
-
-        console.log("🔹 Searching for Donation with pidx:", req.query.pidx);
-
-        // ✅ Find donation using `pidx` and update status
-        const donation = await Donation.findOneAndUpdate(
-            { pidx: req.query.pidx },
-            { status: "completed", transactionId: req.query.transaction_id },
-            { new: true }
+      console.log("🔹 Received Payment Verification Request:", req.query);
+  
+      const pidx = req.query.pidx;
+      if (!pidx) {
+        return res.status(400).json({ success: false, message: "Missing pidx" });
+      }
+  
+      // ✅ 1. Verify with Khalti
+      const paymentInfo = await verifyKhaltiPayment(pidx);
+      console.log("🔹 Khalti Payment Info:", paymentInfo);
+  
+      if (!paymentInfo || paymentInfo.status !== "Completed") {
+        return res.status(400).json({ success: false, message: "Payment not completed", paymentInfo });
+      }
+  
+      // ✅ 2. Update Donation
+      const donation = await Donation.findOneAndUpdate(
+        { pidx },
+        {
+          status: "completed",
+          transactionId: paymentInfo.transaction_id, // ✅ From Khalti lookup response
+        },
+        { new: true }
+      );
+  
+      if (!donation) {
+        console.error("❌ Donation not found for pidx:", pidx);
+        return res.status(404).json({ success: false, message: "Donation record not found" });
+      }
+  
+      // ✅ 3. Increment raisedAmount in Fundraiser
+      if (donation.fundraiserId) {
+        await Fundraiser.findByIdAndUpdate(
+          donation.fundraiserId,
+          { $inc: { raisedAmount: donation.amount } }
         );
-
-        if (!donation) {
-            console.error("❌ Donation record NOT found in DB:", req.query.pidx);
-            return res.status(400).json({ success: false, message: "Donation record not found" });
-        }
-
-        console.log("✅ Donation Verified and Updated:", donation);
-
-        res.json({ success: true, message: "Donation Successful", donation });
+      }
+  
+      console.log("✅ Donation Verified:", donation);
+  
+      return res.json({ success: true, message: "Donation Successful", donation });
     } catch (error) {
-        console.error("❌ Error Verifying Payment:", error);
-        res.status(500).json({ success: false, message: "Error verifying payment", error });
+      console.error("❌ Error Verifying Payment:", error);
+      return res.status(500).json({ success: false, message: "Internal server error", error });
     }
+  });
+  
+
+// ✅ Minimal HTML response after successful Khalti payment
+app.get("/donation-success", (req, res) => {
+  res.send(`
+    <html>
+      <head>
+        <title>Payment Success</title>
+        <script>
+          setTimeout(() => {
+            window.close(); // ✅ Automatically closes browser tab
+          }, 1000);
+        </script>
+      </head>
+      <body style="text-align:center; margin-top: 80px; font-family: sans-serif;">
+        <h2>✅ Payment Successful!</h2>
+        <p>You may now return to the app.</p>
+      </body>
+    </html>
+  `);
 });
+
+
 
 // ✅ IP Configuration Route
 app.get('/ipconfig', (req, res) => {

@@ -42,7 +42,7 @@ class _FundraiserFormScreenState extends State<FundraiserFormScreen> {
 
     try {
       Response response = await Dio().post(
-        'http://100.64.199.99:3000/fundraise', // Update with your API URL
+        'http://192.168.1.5:3000/fundraise', // Update with your API URL
         data: jsonEncode({
           'title': titleController.text.trim(),
           'description': descriptionController.text.trim(),

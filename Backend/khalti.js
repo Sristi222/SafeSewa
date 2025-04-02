@@ -1,40 +1,54 @@
 const axios = require("axios");
 
-async function initializeKhaltiPayment({ return_url, website_url, amount, purchase_order_id, purchase_order_name }) {
+async function initializeKhaltiPayment({
+  return_url,
+  website_url,
+  amount,
+  purchase_order_id,
+  purchase_order_name,
+}) {
   try {
-    let headers = {
+    const headers = {
       Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
       "Content-Type": "application/json",
     };
 
-    let body = JSON.stringify({
-      return_url,
+    const body = JSON.stringify({
+      return_url: `${process.env.BACKEND_URI}/donation-success`, // ✅ Updated return URL
       website_url,
       amount,
       purchase_order_id,
       purchase_order_name,
     });
 
-    let response = await axios.post(`${process.env.KHALTI_GATEWAY_URL}/api/v2/epayment/initiate/`, body, { headers });
+    const response = await axios.post(
+      `${process.env.KHALTI_GATEWAY_URL}/api/v2/epayment/initiate/`,
+      body,
+      { headers }
+    );
     return response.data;
   } catch (error) {
-    throw error.response.data;
+    throw error.response?.data || { message: "Khalti payment init failed" };
   }
 }
 
 async function verifyKhaltiPayment(pidx) {
   try {
-    let headers = {
+    const headers = {
       Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
       "Content-Type": "application/json",
     };
 
-    let body = JSON.stringify({ pidx });
+    const body = JSON.stringify({ pidx });
 
-    let response = await axios.post(`${process.env.KHALTI_GATEWAY_URL}/api/v2/epayment/lookup/`, body, { headers });
+    const response = await axios.post(
+      `${process.env.KHALTI_GATEWAY_URL}/api/v2/epayment/lookup/`,
+      body,
+      { headers }
+    );
     return response.data;
   } catch (error) {
-    throw error.response.data;
+    throw error.response?.data || { message: "Khalti verification failed" };
   }
 }
 

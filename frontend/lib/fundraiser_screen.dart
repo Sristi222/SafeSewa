@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import 'donation_screen.dart'; // ✅ Import Donation Screen
+import 'package:intl/intl.dart'; // ✅ For number formatting
+import 'donation_screen.dart';
 import 'fundraiser_form_screen.dart';
 
 class FundraiserScreen extends StatefulWidget {
@@ -11,8 +12,8 @@ class FundraiserScreen extends StatefulWidget {
 class _FundraiserScreenState extends State<FundraiserScreen> {
   List<dynamic> fundraisers = [];
   bool isLoading = true;
-  String errorMessage = ''; // Holds error messages if any
-  final String backendUrl = "http://100.64.199.99:3000"; // ✅ Update to match your backend
+  String errorMessage = '';
+  final String backendUrl = "http://192.168.1.5:3000";
 
   @override
   void initState() {
@@ -20,11 +21,10 @@ class _FundraiserScreenState extends State<FundraiserScreen> {
     fetchFundraisers();
   }
 
-  // ✅ Fetch approved fundraisers
   Future<void> fetchFundraisers() async {
     setState(() {
       isLoading = true;
-      errorMessage = ''; // Reset any previous error message
+      errorMessage = '';
     });
 
     try {
@@ -32,7 +32,7 @@ class _FundraiserScreenState extends State<FundraiserScreen> {
 
       if (response.statusCode == 200) {
         setState(() {
-          fundraisers = response.data ?? []; // Ensure it's a list
+          fundraisers = response.data ?? [];
           isLoading = false;
         });
       } else {
@@ -50,12 +50,14 @@ class _FundraiserScreenState extends State<FundraiserScreen> {
     }
   }
 
+  final formatter = NumberFormat('#,##0', 'en_US');
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Fundraisers')),
       body: RefreshIndicator(
-        onRefresh: fetchFundraisers, // ✅ Enables pull-to-refresh
+        onRefresh: fetchFundraisers,
         child: isLoading
             ? Center(child: CircularProgressIndicator())
             : errorMessage.isNotEmpty
@@ -71,30 +73,69 @@ class _FundraiserScreenState extends State<FundraiserScreen> {
                         itemCount: fundraisers.length,
                         itemBuilder: (context, index) {
                           final fundraiser = fundraisers[index];
+                          final title = fundraiser['title'] ?? 'No Title';
+                          final goal = fundraiser['goalAmount'] ?? 0;
+                          final raised = fundraiser['raisedAmount'] ?? 0;
+                          final usage = fundraiser['usagePlan'] ?? "No breakdown provided.";
+
+                          double progress = goal > 0 ? (raised / goal).clamp(0.0, 1.0) : 0.0;
+
                           return Card(
-                            elevation: 2,
-                            margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            child: ListTile(
-                              leading: Icon(Icons.volunteer_activism, color: Colors.blue),
-                              title: Text(
-                                fundraiser['title'] ?? "No Title",
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Text(
-                                'Goal: NPR ${fundraiser['goalAmount'] ?? "Unknown"}',
-                                style: TextStyle(color: Colors.grey[700]),
-                              ),
-                              trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => DonationScreen(
-                                      fundraiserId: fundraiser['_id'] ?? '',
+                            elevation: 4,
+                            margin: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(Icons.volunteer_activism, color: Colors.blue),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(title,
+                                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                      ),
+                                      Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                                    ],
+                                  ),
+                                  SizedBox(height: 12),
+                                  LinearProgressIndicator(
+                                    value: progress,
+                                    minHeight: 10,
+                                    backgroundColor: Colors.grey[300],
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Raised NPR ${formatter.format(raised)} of ${formatter.format(goal)}',
+                                    style: TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    "📌 Usage: $usage",
+                                    style: TextStyle(color: Colors.black87),
+                                  ),
+                                  SizedBox(height: 10),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: ElevatedButton(
+                                      onPressed: () async {
+                                        await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => DonationScreen(
+                                              fundraiserId: fundraiser['_id'],
+                                            ),
+                                          ),
+                                        );
+                                        fetchFundraisers(); // ✅ Refresh progress after return
+                                      },
+                                      child: Text("Donate"),
                                     ),
                                   ),
-                                );
-                              },
+                                ],
+                              ),
                             ),
                           );
                         },
