@@ -25,7 +25,7 @@ class _RecentEventsScreenState extends State<RecentEventsScreen> {
     setState(() => isLoading = true);
     try {
       final res = await http.get(
-        Uri.parse('http://192.168.1.9:3000/api/events/volunteer/${widget.userId}'),
+        Uri.parse('http://100.64.199.99:3000/api/events/volunteer/${widget.userId}'),
       );
       if (res.statusCode == 200) {
         final List decoded = json.decode(res.body);

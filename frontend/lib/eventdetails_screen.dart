@@ -39,7 +39,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     setState(() => isLoading = true);
 
     final response = await http.post(
-      Uri.parse('http://192.168.1.9:3000/api/events/${widget.eventId}/enroll'),
+      Uri.parse('http://100.64.199.99:3000/api/events/${widget.eventId}/enroll'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'volunteerId': widget.userId}),
     );

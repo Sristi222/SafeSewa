@@ -1,4 +1,5 @@
 const app = require("./app");
+const express = require("express");
 const db = require("./config/db");
 const dbdonation = require("./config/dbdonation");
 require("dotenv").config();
@@ -22,6 +23,16 @@ const { startFloodPolling } = require('./cron/floodPoller');
 const connectDB = require('./config/db');
 const eventRoutes = require('./routers/event');
 const { User } = require('./model/user.model');
+const precautionRoutes = require('./routers/precaution.routes');
+const alertRoutes = require('./routers/alerts');
+const disasterRoutes = require('./routers/disaster');
+const scrapeEarthquakeData = require('./scrape/seismoNepalScraper');
+const weatherRoute = require('./routers/weatherRoute');
+
+app.use('/api/precautions', precautionRoutes);
+
+// To serve uploaded images
+app.use('/uploads', express.static('uploads'));
 
 const server = http.createServer(app);
 
@@ -29,18 +40,23 @@ const server = http.createServer(app);
 app.use('/api/events', eventRoutes);
 
 
-const alertRoutes = require('./routers/alerts');
+
 app.use('/api/alerts', alertRoutes);
 
-const scrapeEarthquakeData = require('./scrape/seismoNepalScraper');
 
-scrapeEarthquakeData(); // run immediately
+
 
 setInterval(() => {
   console.log('⏰ Running scheduled earthquake scrape...');
   scrapeEarthquakeData();
 }, 15 * 60 * 1000);
 
+
+app.use('/api/disasters', disasterRoutes);
+
+
+
+app.use('/api/weather', weatherRoute);
 
 
 
@@ -105,14 +121,7 @@ io.on("connection", (socket) => {
 
 // ✅ Connect to MongoDB before starting the server
 // ✅ MongoDB Connection (For SOS & Other Data)
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/newauth";
-mongoose
-  .connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("✅ Connected to MongoDB"))
-  .catch((err) => {
-    console.error("❌ MongoDB Connection Error:", err);
-    process.exit(1);
-  });
+
   app.get("/api/sos-alerts", async (req, res) => {
     try {
       const sosAlerts = await SOS.find().sort({ createdAt: -1 });
@@ -195,7 +204,9 @@ app.post("/api/sos/accept", async (req, res) => {
     res.status(200).json({ success: true, message: "Location Updated!", sos });
   });
 
-connectToMongo();
+
+
+
 
 // Define the port
 const port = process.env.PORT || 3000;
@@ -515,5 +526,5 @@ app.listen(port, '0.0.0.0', () => {
     console.log(`Server running on:`);
     console.log(` - Local: http://localhost:${port}`);
     console.log(` - Network: http://${localIp}:${port}`);
-    console.log(`🚀 Server running on ws://192.168.1.9:${port}`);
+    console.log(`🚀 Server running on ws://100.64.199.99:${port}`);
 });

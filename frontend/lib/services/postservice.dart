@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class PostService {
-  static const String apiUrl = 'http://192.168.1.9:3000/posts'; // Replace with your backend URL
+  static const String apiUrl = 'http://192.168.1.5:3000/posts'; // Replace with your backend URL
 
   // Fetch Posts
   static Future<List<dynamic>> fetchPosts() async {

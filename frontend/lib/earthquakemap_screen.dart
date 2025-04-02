@@ -1,69 +1,85 @@
-// lib/screens/earthquake_map_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-class EarthquakeMapScreen extends StatefulWidget {
+class DisasterMapScreen extends StatefulWidget {
   @override
-  _EarthquakeMapScreenState createState() => _EarthquakeMapScreenState();
+  _DisasterMapScreenState createState() => _DisasterMapScreenState();
 }
 
-class _EarthquakeMapScreenState extends State<EarthquakeMapScreen> {
-  late GoogleMapController mapController;
-  final LatLng _center = const LatLng(28.3949, 84.1240); // Nepal center
-  Set<Marker> _markers = {};
+class _DisasterMapScreenState extends State<DisasterMapScreen> {
+  List<dynamic> alerts = [];
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchEarthquakeAlerts();
+    fetchDisasterData();
   }
 
-  Future<void> fetchEarthquakeAlerts() async {
+  Future<void> fetchDisasterData() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost:3000/api/alerts/earthquakes'));
+      final response = await http.get(
+        Uri.parse('http://100.64.199.99:3000/api/disasters'), // Your backend IP
+      );
       if (response.statusCode == 200) {
-        final List alerts = json.decode(response.body);
-        Set<Marker> loadedMarkers = alerts.map((alert) {
-          return Marker(
-            markerId: MarkerId(alert['_id']),
-            position: LatLng(alert['latitude'], alert['longitude']),
-            infoWindow: InfoWindow(
-              title: 'Mag ${alert['description'].split(" ")[1]}',
-              snippet: alert['location'],
-            ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-          );
-        }).toSet();
-
+        final List data = json.decode(response.body);
         setState(() {
-          _markers = loadedMarkers;
+          alerts = data;
+          isLoading = false;
         });
       } else {
-        print("Failed to load alerts");
+        print("Failed to load disaster data: ${response.statusCode}");
+        setState(() => isLoading = false);
       }
     } catch (e) {
-      print("Error: $e");
+      print("Error fetching disaster data: $e");
+      setState(() => isLoading = false);
     }
-  }
-
-  void _onMapCreated(GoogleMapController controller) {
-    mapController = controller;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Live Earthquake Map')),
-      body: GoogleMap(
-        onMapCreated: _onMapCreated,
-        initialCameraPosition: CameraPosition(
-          target: _center,
-          zoom: 6,
-        ),
-        markers: _markers,
-      ),
+      appBar: AppBar(title: Text('Live Disaster Alerts')),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: ListView.builder(
+                itemCount: alerts.length,
+                itemBuilder: (context, index) {
+                  final alert = alerts[index];
+                  return Card(
+                    color: alert['type'] == 'earthquake' ? Colors.red[100] : Colors.blue[100],
+                    elevation: 3,
+                    margin: EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.warning,
+                        color: alert['type'] == 'earthquake' ? Colors.red : Colors.blue,
+                      ),
+                      title: Text(
+                        alert['type'].toString().toUpperCase(),
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(alert['description'] ?? 'No description'),
+                      trailing: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text('Lat: ${alert['location']['lat']}'),
+                          Text('Lng: ${alert['location']['lng']}'),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
     );
   }
 }

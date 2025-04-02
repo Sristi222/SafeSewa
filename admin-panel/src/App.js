@@ -7,6 +7,7 @@ import Donations from './pages/Donation';
 import SOSAlerts from './pages/SOSAlerts';
 import AddEvent from './pages/AddEvent';
 import EventSummary from './pages/EventSummary';
+import Precaution from './pages/DisasterPrecaution'
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
@@ -28,16 +29,19 @@ function App() {
               <Link className="nav-link text-white" to="/volunteers">Volunteers</Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link text-white" to="/donations">Donations</Link>
+              <Link className="nav-link text-white" to="/donations">Approve Donations</Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link text-white" to="/sos-alerts">SOS Alerts</Link>
+              <Link className="nav-link text-white" to="/sos-alerts"></Link>
             </li>
             <li className="nav-item">
               <Link className="nav-link text-white" to="/addevent">Add Events</Link>
             </li>
             <li className="nav-item">
               <Link className="nav-link text-white" to="/eventsummary">Event Summary</Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link text-white" to="/precaution">Precaution</Link>
             </li>
           </ul>
         </div>
@@ -50,7 +54,7 @@ function App() {
             <Route path="/sos-alerts" element={<SOSAlerts />} />
             <Route path="/addevent" element={<AddEvent />} />
             <Route path="/eventsummary" element={<EventSummary />} />
-
+            <Route path="/precaution" element={<Precaution />} />
 
           </Routes>
         </div>

@@ -1,27 +1,59 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; // Firebase Core for initialization
-import 'package:firebase_messaging/firebase_messaging.dart'; // For FCM notifications
-import 'package:shared_preferences/shared_preferences.dart'; // ✅ Added SharedPreferences
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'login.dart';
 import 'registration.dart';
 import 'dashboard.dart';
 import 'admin_dashboard.dart';
 import 'volunteer_dashboard.dart';
 
-// Background message handler for FCM
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print("Handling background message: ${message.messageId}");
+  print("Handling background message: \${message.messageId}");
+}
+
+Future<void> showLocalNotification(String title, String body) async {
+  const AndroidNotificationDetails androidPlatformChannelSpecifics =
+      AndroidNotificationDetails(
+    'disaster_channel',
+    'Disaster Alerts',
+    channelDescription: 'Channel for disaster alert notifications',
+    importance: Importance.max,
+    priority: Priority.high,
+    ticker: 'ticker',
+  );
+
+  const NotificationDetails platformChannelSpecifics =
+      NotificationDetails(android: androidPlatformChannelSpecifics);
+
+  await flutterLocalNotificationsPlugin.show(
+    0,
+    title,
+    body,
+    platformChannelSpecifics,
+    payload: 'default',
+  );
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // ✅ Initialize Firebase
+  await Firebase.initializeApp();
 
-  // ✅ Initialize Firebase Messaging
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+
+  const InitializationSettings initializationSettings =
+      InitializationSettings(android: initializationSettingsAndroid);
+
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // ✅ Retrieve saved user credentials for auto-login
   final prefs = await SharedPreferences.getInstance();
   String? token = prefs.getString("token");
   String? userId = prefs.getString("userId");
@@ -37,7 +69,7 @@ void main() async {
       homeScreen = Dashboard(token: token, userId: userId);
     }
   } else {
-    homeScreen = const SignInPage(); // ✅ Redirect to login if no token is found
+    homeScreen = const SignInPage();
   }
 
   runApp(MyApp(homeScreen: homeScreen));
@@ -53,9 +85,9 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'SafeSewa',
       theme: ThemeData(primarySwatch: Colors.blue),
-      initialRoute: '/', // ✅ Keep initial route
+      initialRoute: '/',
       routes: {
-        '/': (context) => homeScreen, // ✅ Auto-login logic applied here
+        '/': (context) => homeScreen,
         '/login': (context) => SignInPage(),
         '/signup': (context) => SignupPage(),
         '/dashboard': (context) => const Dashboard(token: '', userId: ''),
@@ -83,7 +115,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void _initializeFirebaseMessaging() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
 
-    // Request permission for notifications
     NotificationSettings settings = await messaging.requestPermission(
       alert: true,
       announcement: false,
@@ -94,23 +125,25 @@ class _HomeScreenState extends State<HomeScreen> {
       sound: true,
     );
 
-    print('Notification permission status: ${settings.authorizationStatus}');
+    print('Notification permission status: \${settings.authorizationStatus}');
 
-    // Get the FCM token
     messaging.getToken().then((token) {
       setState(() {
         _fcmToken = token;
       });
-      print('Firebase Messaging Token: $_fcmToken');
+      print('Firebase Messaging Token: \$_fcmToken');
     });
 
-    // Listen for foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('Received foreground message: ${message.messageId}');
-      print('Message data: ${message.data}');
+      print('Received foreground message: \${message.messageId}');
+      print('Message data: \${message.data}');
       if (message.notification != null) {
-        print(
-            'Message notification: ${message.notification?.title}, ${message.notification?.body}');
+        print('Message notification: \${message.notification?.title}, \${message.notification?.body}');
+
+        showLocalNotification(
+          message.notification?.title ?? 'Alert',
+          message.notification?.body ?? 'You have a new message',
+        );
       }
     });
   }
@@ -125,20 +158,20 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             ElevatedButton(
               onPressed: () {
-                Navigator.pushNamed(context, '/login'); // Navigate to Login
+                Navigator.pushNamed(context, '/login');
               },
               child: const Text("Go to Login"),
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.pushNamed(context, '/signup'); // Navigate to Signup
+                Navigator.pushNamed(context, '/signup');
               },
               child: const Text("Go to Signup"),
             ),
-            if (_fcmToken != null) // Display the FCM Token if available
+            if (_fcmToken != null)
               Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: SelectableText('FCM Token:\n$_fcmToken'),
+                child: SelectableText('FCM Token:\n\$_fcmToken'),
               ),
           ],
         ),

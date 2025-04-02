@@ -24,7 +24,7 @@ class _LiveAlertMapScreenState extends State<LiveAlertMapScreen> {
   }
 
   void _connectSocket() {
-    socket = IO.io('http://192.168.1.9:3000', <String, dynamic>{
+    socket = IO.io('http://100.64.199.99:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': true,
     });
@@ -50,7 +50,7 @@ class _LiveAlertMapScreenState extends State<LiveAlertMapScreen> {
   }
 
   Future<void> _fetchAlerts() async {
-    final res = await http.get(Uri.parse('http://192.168.1.9:3000/api/alerts'));
+    final res = await http.get(Uri.parse('http://100.64.199.99:3000/api/alerts'));
     final List data = json.decode(res.body);
     for (var alert in data) {
       if (selectedTypes.contains(alert['type'])) {

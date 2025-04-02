@@ -10,11 +10,13 @@ import '../services/api_service.dart';
 import 'fundraiser_screen.dart';
 import './fundraiser_form_screen.dart';
 import './disaster_map.dart';
+import './helpline_screen.dart';
 import './earthquakemap_screen.dart';
+import './disaster_precaution_screen.dart';
+import './TestLivemap.dart';
 
-
-
-
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class Dashboard extends StatefulWidget {
   final String token;
@@ -33,18 +35,26 @@ class _DashboardState extends State<Dashboard> {
   String? username;
   int floodAlertCount = 0;
 
+  String city = '';
+  String description = '';
+  double temperature = 0;
+  String icon = '';
+  bool isLoadingWeather = true;
+
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _fetchContacts();
     _fetchAlerts();
+    _fetchWeather();
   }
 
   Future<void> _fetchContacts() async {
     final contacts = await ApiServices.fetchEmergencyContacts();
     setState(() {
-      emergencyContacts = contacts.map((c) => "${c['name']} (${c['phone']})").toList();
+      emergencyContacts =
+          contacts.map((c) => "${c['name']} (${c['phone']})").toList();
     });
   }
 
@@ -52,7 +62,8 @@ class _DashboardState extends State<Dashboard> {
     final data = await ApiService.fetchFloodAlerts();
     setState(() {
       alerts = data;
-      floodAlertCount = alerts.where((alert) => alert['status'] == 'Flood Alert!').length;
+      floodAlertCount =
+          alerts.where((alert) => alert['status'] == 'Flood Alert!').length;
     });
   }
 
@@ -63,6 +74,27 @@ class _DashboardState extends State<Dashboard> {
     });
   }
 
+  Future<void> _fetchWeather() async {
+    try {
+      final response =
+          await http.get(Uri.parse('http://100.64.199.99:3000/api/weather'));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          city = data['city'];
+          description = data['description'];
+          temperature = data['temp'];
+          icon = data['icon'];
+          isLoadingWeather = false;
+        });
+      } else {
+        print("Failed to fetch weather");
+      }
+    } catch (e) {
+      print("Error fetching weather: $e");
+    }
+  }
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -70,22 +102,31 @@ class _DashboardState extends State<Dashboard> {
 
     switch (index) {
       case 2:
-        Navigator.push(context, MaterialPageRoute(builder: (context) => SOSScreen(userId: widget.userId)));
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => SOSScreen(userId: widget.userId)));
         break;
       case 3:
-        Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen())).then((_) => _fetchContacts());
+        Navigator.push(context,
+                MaterialPageRoute(builder: (context) => ProfileScreen()))
+            .then((_) => _fetchContacts());
         break;
       case 4:
-        Navigator.push(context, MaterialPageRoute(builder: (context) => FeedScreen()));
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => FeedScreen()));
         break;
       case 5:
-        Navigator.push(context, MaterialPageRoute(builder: (context) => FundraiserFormScreen()));
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => FundraiserFormScreen()));
         break;
       case 6:
-        Navigator.push(context, MaterialPageRoute(builder: (context) => FundraiserScreen()));
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => FundraiserScreen()));
         break;
       case 7:
-        Navigator.push(context, MaterialPageRoute(builder: (context) => FundraiserScreen()));
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => HelplinePage()));
         break;
     }
   }
@@ -103,7 +144,8 @@ class _DashboardState extends State<Dashboard> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => AlertListScreen(alerts: alerts)),
+                    MaterialPageRoute(
+                        builder: (context) => AlertListScreen(alerts: alerts)),
                   );
                 },
               ),
@@ -126,13 +168,14 @@ class _DashboardState extends State<Dashboard> {
                       ),
                     ),
                   ),
-              )
+                )
             ],
           ),
           IconButton(
             icon: const Icon(Icons.account_circle, size: 30),
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => ProfilePage()));
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => ProfilePage()));
             },
           ),
         ],
@@ -144,51 +187,42 @@ class _DashboardState extends State<Dashboard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 10),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.lightBlueAccent.shade100,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Register as a Rescuer",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+              isLoadingWeather
+                  ? Center(child: CircularProgressIndicator())
+                  : Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.lightBlueAccent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Image.network(
+                            'https://openweathermap.org/img/wn/$icon@2x.png',
+                            width: 50,
+                            height: 50,
+                          ),
+                          const SizedBox(width: 16),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("$temperature°C in $city",
+                                  style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white)),
+                              Text(description,
+                                  style:
+                                      const TextStyle(color: Colors.white70)),
+                            ],
+                          )
+                        ],
+                      ),
                     ),
-                    SizedBox(height: 4),
-                    Text(
-                      "Sign in for Safe Sewa Rescuer, Help people and become a real-life hero",
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                  ],
-                ),
-              ),
               const SizedBox(height: 25),
-              const Text("What are you looking for?", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              GridView.count(
-                crossAxisCount: 3,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                children: List.generate(6, (index) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: Colors.grey.shade200,
-                    ),
-                    child: const Center(
-                      child: Icon(Icons.image, size: 40, color: Colors.black38),
-                    ),
-                  );
-                }),
-              ),
-              const SizedBox(height: 25),
-              const Text("Items", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text("Items",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               GridView.count(
                 crossAxisCount: 3,
@@ -198,28 +232,50 @@ class _DashboardState extends State<Dashboard> {
                 crossAxisSpacing: 12,
                 children: [
                   _buildItemTile(Icons.favorite, "Donations", () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => FundraiserScreen()));
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => FundraiserScreen()));
                   }),
                   _buildItemTile(Icons.feed, "Feed", () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => FeedScreen()));
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => FeedScreen()));
                   }),
                   _buildItemTile(Icons.map, "SOS Map", () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => LiveAlertMapScreen()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => LiveAlertMapScreen()));
                   }),
                   _buildItemTile(Icons.contact_phone, "Contacts", () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen()));
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => ProfileScreen()));
                   }),
                   _buildItemTile(Icons.warning, "Alerts", () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => AlertListScreen(alerts: alerts)));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => AlertListScreen(alerts: alerts)));
                   }),
                   _buildItemTile(Icons.add_alert, "Add SOS", () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => SOSScreen(userId: widget.userId)));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => SOSScreen(userId: widget.userId)));
                   }),
                   _buildItemTile(Icons.add_alert, "Disaster Precaution", () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const DisasterPreventionPage()));
                   }),
                   _buildItemTile(Icons.add_alert, "Live Dashboard", () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => EarthquakeMapScreen()));
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => DisasterMapScreen()));
+                  }),
+                  _buildItemTile(Icons.add_alert, "Live Dashboard", () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => DisasterMapScreenn()));
                   }),
                 ],
               ),
@@ -234,13 +290,19 @@ class _DashboardState extends State<Dashboard> {
         onTap: _onItemTapped,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Alerts'),
-          BottomNavigationBarItem(icon: Icon(Icons.sos, color: Colors.red), label: 'SOS'),
-          BottomNavigationBarItem(icon: Icon(Icons.contact_phone), label: 'Contacts'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.notifications), label: 'Alerts'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.sos, color: Colors.red), label: 'SOS'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.contact_phone), label: 'Contacts'),
           BottomNavigationBarItem(icon: Icon(Icons.feed), label: 'Feed'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Fundraisers'),
-          BottomNavigationBarItem(icon: Icon(Icons.volunteer_activism), label: 'Donations'),
-          BottomNavigationBarItem(icon: Icon(Icons.volunteer_activism), label: 'Helpline'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.favorite), label: 'Fundraisers'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.volunteer_activism), label: 'Donations'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.volunteer_activism), label: 'Helpline'),
         ],
       ),
     );
@@ -293,7 +355,9 @@ class AlertListScreen extends StatelessWidget {
             trailing: Text(
               alert['status'],
               style: TextStyle(
-                color: alert['status'] == 'Flood Alert!' ? Colors.red : Colors.green,
+                color: alert['status'] == 'Flood Alert!'
+                    ? Colors.red
+                    : Colors.green,
                 fontWeight: FontWeight.bold,
               ),
             ),

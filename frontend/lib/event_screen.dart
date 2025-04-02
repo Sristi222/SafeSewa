@@ -23,7 +23,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
   }
 
   Future<void> fetchEvents() async {
-    final response = await http.get(Uri.parse('http://192.168.1.9:3000/api/events'));
+    final response = await http.get(Uri.parse('http://100.64.199.99:3000/api/events'));
     if (response.statusCode == 200) {
       final List decoded = json.decode(response.body);
       setState(() {
