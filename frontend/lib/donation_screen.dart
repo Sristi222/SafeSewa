@@ -17,7 +17,7 @@ class _DonationScreenState extends State<DonationScreen>
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _donorNameController = TextEditingController();
 
-  final String backendUrl = "http://192.168.1.5:3000";
+  final String backendUrl = "http://192.168.1.3:3000";
 
   bool _openedKhalti = false;
   String? _latestPidx;

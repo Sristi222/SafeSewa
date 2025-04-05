@@ -21,7 +21,7 @@ class _DisasterMapScreenState extends State<DisasterMapScreen> {
   Future<void> fetchDisasterData() async {
     try {
       final response = await http.get(
-        Uri.parse('http://100.64.199.99:3000/api/disasters'), // Your backend IP
+        Uri.parse('http://192.168.1.3:3000/api/disasters'), // Your backend IP
       );
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);

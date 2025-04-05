@@ -13,7 +13,7 @@ class _FundraiserScreenState extends State<FundraiserScreen> {
   List<dynamic> fundraisers = [];
   bool isLoading = true;
   String errorMessage = '';
-  final String backendUrl = "http://192.168.1.5:3000";
+  final String backendUrl = "http://192.168.1.3:3000";
 
   @override
   void initState() {

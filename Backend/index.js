@@ -29,6 +29,11 @@ const disasterRoutes = require('./routers/disaster');
 const scrapeEarthquakeData = require('./scrape/seismoNepalScraper');
 const weatherRoute = require('./routers/weatherRoute');
 const helplineRoutes = require('./routers/helpline.routes');
+const testPush = require('./routers/testalert');
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+app.use('/api', testPush);
 
 app.use("/api/helplines", helplineRoutes);
 
@@ -541,6 +546,81 @@ app.get("/donation-success", (req, res) => {
 });
 
 
+// ✅ GET donations for one fundraiser + total
+app.get('/admin/fundraiser-donations/:fundraiserId', async (req, res) => {
+  try {
+    const fundraiserId = req.params.fundraiserId;
+
+    const donations = await Donation.find({ fundraiserId, status: 'completed' }).sort({ createdAt: -1 });
+
+    const totalRaised = donations.reduce((sum, d) => sum + d.amount, 0);
+
+    res.json({
+      success: true,
+      donations,
+      totalRaised
+    });
+  } catch (err) {
+    console.error("❌ Error fetching donations:", err);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+app.get('/admin/donations-summary', async (req, res) => {
+  try {
+    const fundraisers = await Fundraiser.find();
+    const allDonations = await Donation.find({ status: 'completed' });
+
+    const summary = fundraisers.map(f => {
+      const fundraiserDonations = allDonations.filter(
+        d => d.fundraiserId?.toString() === f._id.toString()
+      );
+      const totalRaised = fundraiserDonations.reduce((sum, d) => sum + d.amount, 0);
+      return {
+        fundraiserTitle: f.title,
+        fundraiserId: f._id,
+        goal: f.goalAmount,
+        raised: totalRaised,
+        donationCount: fundraiserDonations.length,
+      };
+    });
+
+    res.json({ success: true, summary });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
+  }
+});
+
+app.get('/api/admin/top-donations', async (req, res) => {
+  try {
+    const topDonations = await Donation.find({
+      status: "completed" // only show confirmed donations
+    })
+      .sort({ amount: -1 })
+      .limit(10)
+      .lean();
+
+    const formatted = topDonations.map(d => ({
+      _id: d._id,
+      donorName: d.donorName,
+      amount: d.amount,
+      createdAt: d.createdAt,
+      fundraiserTitle: d.fundraiser?.title || 'N/A'
+    }));
+
+    res.json({ donations: formatted });
+  } catch (error) {
+    console.error("Top donation fetch failed:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+
+
+
+
 
 // ✅ IP Configuration Route
 app.get('/ipconfig', (req, res) => {
@@ -563,5 +643,5 @@ app.listen(port, '0.0.0.0', () => {
     console.log(`Server running on:`);
     console.log(` - Local: http://localhost:${port}`);
     console.log(` - Network: http://${localIp}:${port}`);
-    console.log(`🚀 Server running on ws://100.64.199.99:${port}`);
+    console.log(`🚀 Server running on ws://192.168.1.3:${port}`);
 });

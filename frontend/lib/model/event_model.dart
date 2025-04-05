@@ -7,7 +7,7 @@ class Event {
   final String location;
   final String date;
   final String time;
-  final int spots;
+  late final int spots;
   final String description;
 
   // Constructor: creates an Event from given values

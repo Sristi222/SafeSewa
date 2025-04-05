@@ -3,6 +3,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -21,8 +23,10 @@ Future<void> showLocalNotification(String title, String body) async {
   const NotificationDetails platformChannelSpecifics =
       NotificationDetails(android: androidPlatformChannelSpecifics);
 
+  final int id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
   await flutterLocalNotificationsPlugin.show(
-    0,
+    id,
     title,
     body,
     platformChannelSpecifics,
@@ -37,30 +41,54 @@ class DisasterMapScreenn extends StatefulWidget {
 
 class _DisasterMapScreenState extends State<DisasterMapScreenn> {
   late GoogleMapController mapController;
-  final LatLng _center = const LatLng(28.3949, 84.1240); // Nepal center
+  final LatLng _center = const LatLng(28.3949, 84.1240);
   Set<Marker> _markers = {};
 
   @override
   void initState() {
     super.initState();
-    initializeLocalNotifications();
+    setupNotifications();
     fetchDisasterData();
   }
 
-  Future<void> initializeLocalNotifications() async {
-    const AndroidInitializationSettings initializationSettingsAndroid =
+  Future<void> setupNotifications() async {
+    await Firebase.initializeApp();
+
+    await FirebaseMessaging.instance.requestPermission();
+    FirebaseMessaging.instance.subscribeToTopic("disaster_alerts");
+
+    const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
+    const InitializationSettings initSettings =
+        InitializationSettings(android: androidSettings);
 
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    await flutterLocalNotificationsPlugin.initialize(
+  initSettings,
+  onDidReceiveNotificationResponse: (NotificationResponse response) async {
+    final payload = response.payload;
+    print("🔔 Notification tapped. Payload: $payload");
+    // Optional: navigate to specific screen
+  },
+);
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      final notif = message.notification;
+      if (notif != null) {
+        showLocalNotification(notif.title ?? '⚠️ Alert', notif.body ?? 'Check map');
+      }
+    });
+
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print("🟢 Notification opened from background: ${message.data}");
+      // Optional: Navigate to screen or handle payload
+    });
   }
 
   Future<void> fetchDisasterData() async {
     try {
       final response = await http.get(
-        Uri.parse('http://100.64.199.99:3000/api/disasters'), // Corrected URL
+        Uri.parse('http://192.168.1.3:3000/api/disasters'),
       );
 
       if (response.statusCode == 200) {
@@ -68,29 +96,49 @@ class _DisasterMapScreenState extends State<DisasterMapScreenn> {
         print("📦 Disaster data received: $data");
 
         Set<Marker> loadedMarkers = {};
+        List<Map<String, dynamic>> earthquakes = [];
 
         for (var item in data) {
           final location = item['location'];
-          if (location != null && location['lat'] != null && location['lng'] != null) {
+          final timestampStr = item['timestamp'];
+
+          if (location != null &&
+              location['lat'] != null &&
+              location['lng'] != null) {
             final type = item['type'] ?? 'Unknown';
             final desc = item['description'] ?? 'No description';
-
-            if (type.toLowerCase() == 'earthquake') {
-              showLocalNotification('⚠️ Earthquake Alert', desc);
-            }
 
             loadedMarkers.add(
               Marker(
                 markerId: MarkerId(item['_id']),
                 position: LatLng(location['lat'], location['lng']),
                 infoWindow: InfoWindow(
-                  title: '⚠️ ${type.toString().toUpperCase()}',
+                  title: '⚠️ ${type.toUpperCase()}',
                   snippet: desc,
                 ),
-                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+                icon: BitmapDescriptor.defaultMarkerWithHue(
+                    BitmapDescriptor.hueRed),
               ),
             );
+
+            if (type.toLowerCase() == 'earthquake' && timestampStr != null) {
+              earthquakes.add({
+                'id': item['_id'],
+                'description': desc,
+                'timestamp': DateTime.parse(timestampStr).toUtc(),
+              });
+            }
           }
+        }
+
+        earthquakes.sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
+
+        if (earthquakes.isNotEmpty) {
+          final latest = earthquakes.first;
+          await showLocalNotification(
+              '⚠️ Earthquake Alert', latest['description']);
+          print(
+              '✅ Notification shown for latest earthquake: ${latest['description']}');
         }
 
         setState(() {
@@ -108,6 +156,30 @@ class _DisasterMapScreenState extends State<DisasterMapScreenn> {
     mapController = controller;
   }
 
+  void triggerFakeAlert() {
+    final fakeId = DateTime.now().millisecondsSinceEpoch.toString();
+    final fakeLatLng = LatLng(27.7172, 85.3240); // Kathmandu
+
+    final Marker fakeMarker = Marker(
+      markerId: MarkerId(fakeId),
+      position: fakeLatLng,
+      infoWindow: InfoWindow(
+        title: '⚠️ EARTHQUAKE',
+        snippet: 'Simulated earthquake near Kathmandu',
+      ),
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+    );
+
+    setState(() {
+      _markers.add(fakeMarker);
+    });
+
+    showLocalNotification(
+      '⚠️ Earthquake Alert',
+      'Simulated earthquake near Kathmandu',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -119,6 +191,12 @@ class _DisasterMapScreenState extends State<DisasterMapScreenn> {
           zoom: 6,
         ),
         markers: _markers,
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: triggerFakeAlert,
+        child: Icon(Icons.warning),
+        backgroundColor: Colors.red,
+        tooltip: 'Simulate Earthquake Alert',
       ),
     );
   }
