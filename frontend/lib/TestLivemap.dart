@@ -9,7 +9,33 @@ import 'package:firebase_core/firebase_core.dart';
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
-Future<void> showLocalNotification(String title, String body) async {
+// ✅ Save notification to backend with proper type
+Future<void> saveNotificationToBackend(String title, String body, {String type = 'general'}) async {
+  try {
+    final response = await http.post(
+      Uri.parse('http://192.168.1.10:3000/api/notifications'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'title': title,
+        'body': body,
+        'type': type,
+        'timestamp': DateTime.now().toIso8601String(),
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      print('✅ Notification saved to backend');
+    } else {
+      print('❌ Failed to store notification: ${response.statusCode} | ${response.body}');
+    }
+  } catch (e) {
+    print('❌ Error saving notification to backend: $e');
+  }
+}
+
+Future<void> showLocalNotification(String title, String body, {String type = 'general'}) async {
+  await saveNotificationToBackend(title, body, type: type); // store in backend
+
   const AndroidNotificationDetails androidPlatformChannelSpecifics =
       AndroidNotificationDetails(
     'disaster_channel',
@@ -53,9 +79,8 @@ class _DisasterMapScreenState extends State<DisasterMapScreenn> {
 
   Future<void> setupNotifications() async {
     await Firebase.initializeApp();
-
     await FirebaseMessaging.instance.requestPermission();
-    FirebaseMessaging.instance.subscribeToTopic("disaster_alerts");
+    FirebaseMessaging.instance.subscribeToTopic("disaster");
 
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -64,31 +89,33 @@ class _DisasterMapScreenState extends State<DisasterMapScreenn> {
         InitializationSettings(android: androidSettings);
 
     await flutterLocalNotificationsPlugin.initialize(
-  initSettings,
-  onDidReceiveNotificationResponse: (NotificationResponse response) async {
-    final payload = response.payload;
-    print("🔔 Notification tapped. Payload: $payload");
-    // Optional: navigate to specific screen
-  },
-);
+      initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) async {
+        final payload = response.payload;
+        print("🔔 Notification tapped. Payload: $payload");
+      },
+    );
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       final notif = message.notification;
       if (notif != null) {
-        showLocalNotification(notif.title ?? '⚠️ Alert', notif.body ?? 'Check map');
+        showLocalNotification(
+          notif.title ?? '⚠️ Alert',
+          notif.body ?? 'Check map',
+          type: message.data['type'] ?? 'general',
+        );
       }
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       print("🟢 Notification opened from background: ${message.data}");
-      // Optional: Navigate to screen or handle payload
     });
   }
 
   Future<void> fetchDisasterData() async {
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.1.3:3000/api/disasters'),
+        Uri.parse('http://192.168.1.10:3000/api/disasters'),
       );
 
       if (response.statusCode == 200) {
@@ -116,8 +143,7 @@ class _DisasterMapScreenState extends State<DisasterMapScreenn> {
                   title: '⚠️ ${type.toUpperCase()}',
                   snippet: desc,
                 ),
-                icon: BitmapDescriptor.defaultMarkerWithHue(
-                    BitmapDescriptor.hueRed),
+                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
               ),
             );
 
@@ -136,9 +162,11 @@ class _DisasterMapScreenState extends State<DisasterMapScreenn> {
         if (earthquakes.isNotEmpty) {
           final latest = earthquakes.first;
           await showLocalNotification(
-              '⚠️ Earthquake Alert', latest['description']);
-          print(
-              '✅ Notification shown for latest earthquake: ${latest['description']}');
+            '⚠️ Earthquake Alert',
+            latest['description'],
+            type: 'earthquake',
+          );
+          print('✅ Notification shown for latest earthquake: ${latest['description']}');
         }
 
         setState(() {
@@ -163,7 +191,7 @@ class _DisasterMapScreenState extends State<DisasterMapScreenn> {
     final Marker fakeMarker = Marker(
       markerId: MarkerId(fakeId),
       position: fakeLatLng,
-      infoWindow: InfoWindow(
+      infoWindow: const InfoWindow(
         title: '⚠️ EARTHQUAKE',
         snippet: 'Simulated earthquake near Kathmandu',
       ),
@@ -177,13 +205,14 @@ class _DisasterMapScreenState extends State<DisasterMapScreenn> {
     showLocalNotification(
       '⚠️ Earthquake Alert',
       'Simulated earthquake near Kathmandu',
+      type: 'earthquake',
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Live Disaster Map')),
+      appBar: AppBar(title: const Text('Live Disaster Map')),
       body: GoogleMap(
         onMapCreated: _onMapCreated,
         initialCameraPosition: CameraPosition(
@@ -194,7 +223,7 @@ class _DisasterMapScreenState extends State<DisasterMapScreenn> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: triggerFakeAlert,
-        child: Icon(Icons.warning),
+        child: const Icon(Icons.warning),
         backgroundColor: Colors.red,
         tooltip: 'Simulate Earthquake Alert',
       ),

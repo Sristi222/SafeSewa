@@ -51,6 +51,9 @@ app.use('/api/events', eventRoutes);
 
 app.use('/api/alerts', alertRoutes);
 
+app.use('/api/notifications', require('./routers/notification'));
+
+
 
 
 
@@ -616,6 +619,34 @@ app.get('/api/admin/top-donations', async (req, res) => {
   }
 });
 
+app.put("/fundraisers/:id", async (req, res) => {
+  try {
+    const updated = await Fundraiser.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+
+    if (!updated) return res.status(404).json({ success: false, message: "Not found" });
+
+    res.status(200).json({ success: true, message: "Fundraiser updated", fundraiser: updated });
+  } catch (err) {
+    console.error("❌ Update error:", err);
+    res.status(500).json({ success: false, message: "Update failed" });
+  }
+});
+
+
+app.delete("/fundraisers/:id", async (req, res) => {
+  try {
+    const deleted = await Fundraiser.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ success: false, message: "Not found" });
+    res.status(200).json({ success: true, message: "Deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Delete failed" });
+  }
+});
+
 
 
 
@@ -643,5 +674,5 @@ app.listen(port, '0.0.0.0', () => {
     console.log(`Server running on:`);
     console.log(` - Local: http://localhost:${port}`);
     console.log(` - Network: http://${localIp}:${port}`);
-    console.log(`🚀 Server running on ws://192.168.1.3:${port}`);
+    console.log(`🚀 Server running on ws://192.168.1.10:${port}`);
 });

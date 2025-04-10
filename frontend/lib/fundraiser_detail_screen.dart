@@ -19,7 +19,7 @@ class _DonationScreenState extends State<DonationScreen> {
   String _selectedPaymentMethod = 'Khalti'; // Default payment method
 
   // ✅ Change the URL based on your local or live server
-  final String backendUrl = "http://192.168.1.3:3000";
+  final String backendUrl = "http://100.64.234.91:3000";
 
   Future<void> _donate() async {
     String amount = _amountController.text.trim();

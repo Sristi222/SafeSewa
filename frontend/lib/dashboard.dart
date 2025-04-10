@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'notificationhistory.dart';
 import 'notification.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'profile_page.dart';
@@ -6,6 +7,7 @@ import 'config.dart';
 import 'feed_screen.dart';
 import 'sos_screen.dart';
 import 'add_emergency_contact.dart';
+import 'utils/flutter_flood_local_notifications.dart'; // <- Import this (after placing the file in lib/utils/)
 import '../services/api_service.dart';
 import 'fundraiser_screen.dart';
 import './fundraiser_form_screen.dart';
@@ -73,19 +75,27 @@ class _DashboardState extends State<Dashboard> {
   }
 
   Future<void> _fetchAlerts() async {
-    setState(() => isLoadingAlerts = true);
-    try {
-      final data = await ApiService.fetchFloodAlerts();
-      setState(() {
-        alerts = data;
-        floodAlertCount = alerts.where((alert) => alert['status'] == 'Flood Alert!').length;
-        isLoadingAlerts = false;
-      });
-    } catch (e) {
-      setState(() => isLoadingAlerts = false);
-      _showErrorSnackBar("Error loading alerts: $e");
+  setState(() => isLoadingAlerts = true);
+  try {
+    final data = await ApiService.fetchFloodAlerts();
+    final count = data.where((alert) => alert['status'] == 'Flood Alert!').length;
+
+    setState(() {
+      alerts = data;
+      floodAlertCount = count;
+      isLoadingAlerts = false;
+    });
+
+    // 🔔 Show local flood alert notification
+    if (count > 0) {
+      await showFloodAlertNotification(count); // <-- Trigger notification
     }
+  } catch (e) {
+    setState(() => isLoadingAlerts = false);
+    _showErrorSnackBar("Error loading alerts: $e");
   }
+}
+
 
   Future<void> _loadUserData() async {
     try {
@@ -101,7 +111,7 @@ class _DashboardState extends State<Dashboard> {
   Future<void> _fetchWeather() async {
     setState(() => isLoadingWeather = true);
     try {
-      final response = await http.get(Uri.parse('http://192.168.1.3:3000/api/weather'));
+      final response = await http.get(Uri.parse('http://192.168.1.10:3000/api/weather'));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
@@ -138,6 +148,12 @@ class _DashboardState extends State<Dashboard> {
     });
 
     switch (index) {
+      case 1: // Add this case for notifications
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => NotificationHistoryScreen()));
+        break;
       case 2:
         Navigator.push(
             context,
@@ -174,15 +190,28 @@ class _DashboardState extends State<Dashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Dashboard",
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         backgroundColor: primaryBlue,
         elevation: 0,
         actions: [
+          // Add this IconButton for notification history
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined, size: 26),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => NotificationHistoryScreen(),
+                ),
+              );
+            },
+          ),
+          // Existing flood alerts notification
           Stack(
             children: [
               IconButton(
@@ -345,6 +374,13 @@ class _DashboardState extends State<Dashboard> {
                                 darkBlue: darkBlue,
                               )));
                     }, primaryBlue),
+                    // Add a new tile for Notifications
+                    _buildItemTile(Icons.notifications, "Notifications", () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => NotificationHistoryScreen()));
+                    }, primaryBlue),
                     _buildItemTile(Icons.add_alert, "Add SOS", () {
                       Navigator.push(
                           context,
@@ -361,11 +397,9 @@ class _DashboardState extends State<Dashboard> {
                       Navigator.push(context,
                           MaterialPageRoute(builder: (_) => DisasterMapScreen()));
                     }, primaryBlue),
-                    _buildItemTile(Icons.public, "Earthquake Map", () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => DisasterMapScreenn()));
+                    _buildItemTile(Icons.dashboard, "Earthquake Map Dashboard", () {
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => DisasterMapScreenn()));
                     }, primaryBlue),
                   ],
                 ),
@@ -392,7 +426,7 @@ class _DashboardState extends State<Dashboard> {
         elevation: 8,
         items: [
           const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          const BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Alerts'),
+          const BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Notifications'), // Added this item
           BottomNavigationBarItem(
               icon: Container(
                 padding: const EdgeInsets.all(8),
@@ -737,9 +771,9 @@ class AlertListScreen extends StatelessWidget {
   final Color primaryBlue;
   final Color lightBlue;
   final Color darkBlue;
-  
+
   const AlertListScreen({
-    super.key, 
+    super.key,
     required this.alerts,
     required this.primaryBlue,
     required this.lightBlue,
@@ -758,7 +792,7 @@ class AlertListScreen extends StatelessWidget {
         backgroundColor: primaryBlue,
         elevation: 0,
       ),
-      body: alerts.isEmpty
+      body: (alerts.isEmpty)
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -770,7 +804,7 @@ class AlertListScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    "No Flood Alerts",
+                    "No Monitoring Stations Available",
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -779,7 +813,7 @@ class AlertListScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "All monitoring stations are reporting normal water levels",
+                    "Please check your connection or try again later.",
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 16,
@@ -795,7 +829,7 @@ class AlertListScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 final alert = alerts[index];
                 final bool isAlertActive = alert['status'] == 'Flood Alert!';
-                
+
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   elevation: 2,
@@ -911,7 +945,7 @@ class AlertListScreen extends StatelessWidget {
             ),
     );
   }
-  
+
   Widget _buildAlertInfoItem(String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),

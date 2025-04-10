@@ -15,7 +15,7 @@ class _DisasterPreventionPageState extends State<DisasterPreventionPage> {
   String searchQuery = '';
 
   // ✅ Change this to your actual IP (same as used in Postman or browser)
-  final String baseUrl = "http://192.168.1.3:3000"; 
+  final String baseUrl = "http://100.64.234.91:3000"; 
 
   @override
   void initState() {

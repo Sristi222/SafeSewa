@@ -13,7 +13,7 @@ class _HelplinePageState extends State<HelplinePage> {
   List<dynamic> filtered = [];
   String searchQuery = '';
 
-  final String apiUrl = 'http://192.168.1.3:3000/api/helplines'; // ⚠️ Update this
+  final String apiUrl = 'http://100.64.234.91:3000/api/helplines'; // ⚠️ Update this
 
   @override
   void initState() {

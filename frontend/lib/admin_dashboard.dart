@@ -22,7 +22,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   bool isFundraisersLoading = true;
   late TabController _tabController;
 
-  final String baseUrl = "http://192.168.1.3:3000"; // ✅ Change this to your backend URL
+  final String baseUrl = "http://100.64.234.91:3000"; // ✅ Change this to your backend URL
 
   @override
   void initState() {

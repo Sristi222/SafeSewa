@@ -47,7 +47,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     });
     
     try {
-      final response = await http.get(Uri.parse('http://192.168.1.8:3000/api/events'));
+      final response = await http.get(Uri.parse('http://100.64.234.91:3000/api/events'));
       if (response.statusCode == 200) {
         final List decoded = json.decode(response.body);
         setState(() {
@@ -188,7 +188,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
 
   Widget _buildEventCard(Event event, int index) {
     final imageUrl = event.image.isNotEmpty
-        ? 'http://192.168.1.8:3000${event.image}'
+        ? 'http://100.64.234.91:3000${event.image}'
         : 'https://via.placeholder.com/300x150.png?text=No+Image';
 
     return Hero(

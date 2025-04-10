@@ -15,4 +15,12 @@ router.put("/admin/approve/:id", UserController.approveVolunteer);
 // Admin: Get all users
 router.get("/users", UserController.getAllUsers);
 
+// Node.js (Express)
+router.get('/users/:id', async (req, res) => {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  });
+  
+
 module.exports = router;

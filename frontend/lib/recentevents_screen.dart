@@ -25,7 +25,7 @@ class _RecentEventsScreenState extends State<RecentEventsScreen> {
   final Color darkBlue = const Color(0xFF1565C0);
   final Color accentBlue = const Color(0xFF03A9F4);
   
-  final String baseUrl = 'http://192.168.1.8:3000';
+  final String baseUrl = 'http://100.64.234.91:3000';
 
   @override
   void initState() {

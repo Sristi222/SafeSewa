@@ -22,7 +22,6 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadProfileData();
   }
 
-  // Load Profile Data
   Future<void> _loadProfileData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -33,7 +32,6 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
-  // Pick Image from Gallery
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -44,7 +42,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  // Save Profile Data
   Future<void> _saveProfileData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('profile_name', _nameController.text);
@@ -52,7 +49,6 @@ class _ProfilePageState extends State<ProfilePage> {
     if (_imageFile != null) await prefs.setString('profile_image', _imageFile!.path);
   }
 
-  // Edit Profile Dialog
   void _editProfile() {
     showDialog(
       context: context,
@@ -70,7 +66,7 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: () {
               Navigator.pop(context);
               _saveProfileData();
-              setState(() {}); // Update UI
+              setState(() {});
             },
             child: const Text("Save"),
           ),
@@ -79,7 +75,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Sign Out and Go to Login Page
   void _signOut() {
     Navigator.pushReplacementNamed(context, "/login");
   }
@@ -87,62 +82,94 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[900],
-      body: Column(
-        children: [
-          Stack(
-            alignment: Alignment.center,
+      backgroundColor: const Color(0xFFF5F9FF),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          child: Column(
             children: [
-              Container(
-                width: double.infinity,
-                height: 250,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [Colors.blueAccent, Colors.purpleAccent]),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(30),
-                    bottomRight: Radius.circular(30),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Your Profile",
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2A2A2A),
+                    ),
                   ),
-                ),
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: CircleAvatar(
+                      radius: 30,
+                      backgroundColor: Colors.white,
+                      child: CircleAvatar(
+                        radius: 28,
+                        backgroundImage: _imageFile != null
+                            ? FileImage(_imageFile!)
+                            : const AssetImage('assets/profile.jpg') as ImageProvider,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              GestureDetector(
-                onTap: _pickImage,
-                child: CircleAvatar(
-                  radius: 60,
-                  backgroundColor: Colors.white,
-                  child: CircleAvatar(
-                    radius: 55,
-                    backgroundImage: _imageFile != null
-                        ? FileImage(_imageFile!)
-                        : const AssetImage('assets/profile.jpg') as ImageProvider,
-                  ),
+              const SizedBox(height: 30),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      _nameController.text,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      _usernameController.text,
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 20),
+                    _actionButton(Icons.edit, "Edit Profile", const Color(0xFF4A90E2), _editProfile),
+                    const SizedBox(height: 10),
+                    _actionButton(Icons.logout, "Sign Out", const Color(0xFFE94E77), _signOut),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Text(_nameController.text, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-          Text(_usernameController.text, style: TextStyle(fontSize: 16, color: Colors.grey[400])),
-          const SizedBox(height: 20),
-
-          // Buttons
-          _actionButton(Icons.edit, "Edit Profile", Colors.blueAccent, _editProfile),
-          const SizedBox(height: 10),
-          _actionButton(Icons.logout, "Sign Out", Colors.redAccent, _signOut),
-        ],
+        ),
       ),
     );
   }
 
   Widget _actionButton(IconData icon, String label, Color color, VoidCallback onPressed) {
-    return ElevatedButton.icon(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        onPressed: onPressed,
+        icon: Icon(icon, color: Colors.white),
+        label: Text(label, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
       ),
-      onPressed: onPressed,
-      icon: Icon(icon, color: Colors.white),
-      label: Text(label, style: const TextStyle(color: Colors.white)),
     );
   }
 }

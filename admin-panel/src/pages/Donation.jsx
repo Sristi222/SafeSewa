@@ -1,57 +1,94 @@
 // src/pages/Donations.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Container, Card, Button, Spinner } from 'react-bootstrap';
+import { Container, Card, Button, Spinner, Row, Col, Badge } from 'react-bootstrap';
 
 const Donations = () => {
   const [fundraisers, setFundraisers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [approvingId, setApprovingId] = useState(null);
 
-  const fetchFundraisers = () => {
+  const fetchFundraisers = async () => {
     setLoading(true);
-    axios.get('http://localhost:3000/pending-fundraisers')
-      .then(res => {
-        if (res.data.success) {
-          setFundraisers(res.data.fundraisers);
-        }
-      })
-      .catch(err => console.error('Error fetching fundraisers', err))
-      .finally(() => setLoading(false));
+    try {
+      const res = await axios.get('http://localhost:3000/pending-fundraisers');
+      if (res.data.success && Array.isArray(res.data.fundraisers)) {
+        setFundraisers(res.data.fundraisers);
+      } else {
+        console.warn("⚠️ No fundraisers returned.");
+      }
+    } catch (err) {
+      console.error("❌ Error fetching fundraisers:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const approveFundraiser = async (id) => {
+    setApprovingId(id);
+    try {
+      await axios.put(`http://localhost:3000/approve-fundraiser/${id}`);
+      fetchFundraisers();
+    } catch (err) {
+      console.error('❌ Error approving fundraiser:', err);
+    } finally {
+      setApprovingId(null);
+    }
   };
 
   useEffect(() => {
     fetchFundraisers();
   }, []);
 
-  const approveFundraiser = (id) => {
-    axios.put(`http://localhost:3000/approve-fundraiser/${id}`)
-      .then(() => {
-        fetchFundraisers();
-      })
-      .catch(err => console.error('Error approving fundraiser', err));
-  };
-
   return (
     <Container className="my-4">
-      <h2>Pending Fundraisers</h2>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h2>📝 Pending Fundraisers</h2>
+        <Button onClick={fetchFundraisers} variant="outline-primary" size="sm">Refresh</Button>
+      </div>
+
       {loading ? (
         <div className="text-center my-5">
           <Spinner animation="border" />
         </div>
+      ) : fundraisers.length > 0 ? (
+        fundraisers.map(f => (
+          <Card key={f._id} className="mb-4 shadow-sm">
+            <Card.Body>
+              <Row>
+                <Col md={9}>
+                  <Card.Title className="mb-2">{f.title}</Card.Title>
+                  <div className="mb-2">
+                    <Badge bg="info" className="me-2">{f.category || 'N/A'}</Badge>
+                    <Badge bg="warning" text="dark">Goal: ₹{f.goalAmount}</Badge>
+                  </div>
+                  <Card.Text><strong>Description:</strong> {f.description}</Card.Text>
+                  {f.usage && <Card.Text><strong>Usage:</strong> {f.usage}</Card.Text>}
+                  {f.location && <Card.Text><strong>Location:</strong> {f.location}</Card.Text>}
+                  {f.contactNumber && <Card.Text><strong>Contact:</strong> {f.contactNumber}</Card.Text>}
+                  {f.bankInfo && <Card.Text><strong>Bank Info:</strong> {f.bankInfo}</Card.Text>}
+                  <Card.Text className="text-muted">
+                    <strong>Submitted by:</strong> {f.userId?.name || f.userId || "N/A"}
+                  </Card.Text>
+                </Col>
+
+                <Col md={3} className="d-flex align-items-center justify-content-end">
+                  <Button
+                    variant="success"
+                    onClick={() => approveFundraiser(f._id)}
+                    disabled={approvingId === f._id}
+                  >
+                    {approvingId === f._id ? (
+                      <Spinner size="sm" animation="border" />
+                    ) : 'Approve'}
+                  </Button>
+                </Col>
+              </Row>
+            </Card.Body>
+          </Card>
+        ))
       ) : (
-        fundraisers.length > 0 ? (
-          fundraisers.map(fundraiser => (
-            <Card key={fundraiser._id} className="mb-3">
-              <Card.Body>
-                <Card.Title>{fundraiser.title}</Card.Title>
-                <Card.Text>{fundraiser.description}</Card.Text>
-                <Button variant="primary" onClick={() => approveFundraiser(fundraiser._id)}>
-                  Approve
-                </Button>
-              </Card.Body>
-            </Card>
-          ))
-        ) : <p>No pending fundraisers.</p>
+        <p className="text-muted">No pending fundraisers to approve.</p>
       )}
     </Container>
   );

@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import AdminFundraiserDetail from './DonarSummary';
+import { Modal, Button, Form } from 'react-bootstrap';
 
 const AdminFundraiserSummary = () => {
   const [summary, setSummary] = useState([]);
   const [selectedFundraiser, setSelectedFundraiser] = useState(null);
+  const [editFundraiser, setEditFundraiser] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const [sortBy, setSortBy] = useState('fundraiserTitle');
   const [sortOrder, setSortOrder] = useState('asc');
+  const [showModal, setShowModal] = useState(false);
+  const [editForm, setEditForm] = useState({ title: '', goal: '' });
 
   useEffect(() => {
     fetchSummary();
@@ -23,6 +27,36 @@ const AdminFundraiserSummary = () => {
       }
     } catch (err) {
       console.error("❌ Failed to fetch summary", err);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this fundraiser?")) {
+      try {
+        await axios.delete(`http://localhost:3000/fundraisers/${id}`);
+        fetchSummary();
+      } catch (err) {
+        console.error("❌ Error deleting fundraiser", err);
+      }
+    }
+  };
+
+  const handleEditClick = (fundraiser) => {
+    setEditFundraiser(fundraiser);
+    setEditForm({ title: fundraiser.fundraiserTitle, goal: fundraiser.goal });
+    setShowModal(true);
+  };
+
+  const handleEditSave = async () => {
+    try {
+      await axios.put(`http://localhost:3000/fundraisers/${editFundraiser.fundraiserId}`, {
+        title: editForm.title,
+        goalAmount: parseInt(editForm.goal)
+      });
+      setShowModal(false);
+      fetchSummary();
+    } catch (err) {
+      console.error("❌ Error updating fundraiser", err);
     }
   };
 
@@ -74,7 +108,7 @@ const AdminFundraiserSummary = () => {
                 <th onClick={() => handleSort('goal')} style={{ cursor: 'pointer' }}>Goal Amount {sortBy === 'goal' ? (sortOrder === 'asc' ? '⬆' : '⬇') : ''}</th>
                 <th onClick={() => handleSort('raised')} style={{ cursor: 'pointer' }}>Raised {sortBy === 'raised' ? (sortOrder === 'asc' ? '⬆' : '⬇') : ''}</th>
                 <th onClick={() => handleSort('donationCount')} style={{ cursor: 'pointer' }}>Donations {sortBy === 'donationCount' ? (sortOrder === 'asc' ? '⬆' : '⬇') : ''}</th>
-                <th>Action</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -85,14 +119,15 @@ const AdminFundraiserSummary = () => {
                   <td><strong>Rs. {f.raised.toLocaleString()}</strong></td>
                   <td>{f.donationCount}</td>
                   <td>
-                    <button className="btn btn-primary btn-sm" onClick={() => setSelectedFundraiser(f)}>View Donors</button>
+                    <button className="btn btn-primary btn-sm me-1" onClick={() => setSelectedFundraiser(f)}>View Donors</button>
+                    <button className="btn btn-warning btn-sm me-1" onClick={() => handleEditClick(f)}>Edit</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(f.fundraiserId)}>Delete</button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          {/* Pagination */}
           <div className="d-flex justify-content-center mt-3">
             {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
               <button
@@ -104,6 +139,36 @@ const AdminFundraiserSummary = () => {
               </button>
             ))}
           </div>
+
+          <Modal show={showModal} onHide={() => setShowModal(false)}>
+            <Modal.Header closeButton>
+              <Modal.Title>Edit Fundraiser</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <Form>
+                <Form.Group className="mb-3">
+                  <Form.Label>Title</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  />
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>Goal Amount</Form.Label>
+                  <Form.Control
+                    type="number"
+                    value={editForm.goal}
+                    onChange={(e) => setEditForm({ ...editForm, goal: e.target.value })}
+                  />
+                </Form.Group>
+              </Form>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
+              <Button variant="primary" onClick={handleEditSave}>Save Changes</Button>
+            </Modal.Footer>
+          </Modal>
         </>
       )}
     </div>

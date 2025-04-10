@@ -4,9 +4,14 @@ import 'package:frontend/config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
-class SignupPage extends StatelessWidget {
-  SignupPage({super.key});
+class SignupPage extends StatefulWidget {
+  const SignupPage({super.key});
 
+  @override
+  State<SignupPage> createState() => _SignupPageState();
+}
+
+class _SignupPageState extends State<SignupPage> {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
@@ -22,7 +27,7 @@ class SignupPage extends StatelessWidget {
     final password = passwordController.text.trim();
     final confirmPassword = confirmPasswordController.text.trim();
 
-    if (username.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+    if ([username, email, phone, password, confirmPassword].any((e) => e.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("All fields are required")),
       );
@@ -62,10 +67,13 @@ class SignupPage extends StatelessWidget {
           return;
         }
 
-        print("✅ Registration Successful! User ID: $userId");
-
+        // ✅ Store profile data locally
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString("userId", userId);
+        await prefs.setString("profile_name", username);
+        await prefs.setString("profile_email", email);
+        await prefs.setString("profile_phone", phone);
+        await prefs.setString("profile_username", '@$username');
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Signup successful! Please log in.")),
@@ -109,11 +117,7 @@ class SignupPage extends StatelessWidget {
               children: [
                 const Text(
                   "Create Account",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1D2AFF),
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1D2AFF)),
                 ),
                 const SizedBox(height: 24),
                 DropdownButtonFormField<String>(
@@ -122,7 +126,7 @@ class SignupPage extends StatelessWidget {
                     return DropdownMenuItem(value: role, child: Text(role));
                   }).toList(),
                   onChanged: (newValue) {
-                    selectedRole = newValue!;
+                    setState(() => selectedRole = newValue!);
                   },
                   decoration: InputDecoration(
                     labelText: "Register as",
@@ -130,102 +134,20 @@ class SignupPage extends StatelessWidget {
                     fillColor: const Color(0xFFF1F4FF),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide:
-                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide:
-                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
+                      borderSide: const BorderSide(color: Color(0xFF1D2AFF)),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: usernameController,
-                  decoration: InputDecoration(
-                    hintText: "Username",
-                    filled: true,
-                    fillColor: const Color(0xFFF1F4FF),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide:
-                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide:
-                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
-                    ),
-                  ),
-                ),
+                _inputField("Username", usernameController),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: emailController,
-                  decoration: InputDecoration(
-                    hintText: "Email",
-                    filled: true,
-                    fillColor: const Color(0xFFF1F4FF),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide:
-                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide:
-                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
-                    ),
-                  ),
-                ),
+                _inputField("Email", emailController),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    hintText: "Phone Number",
-                    filled: true,
-                    fillColor: const Color(0xFFF1F4FF),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide:
-                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide:
-                          const BorderSide(color: Color(0xFF1D2AFF), width: 1),
-                    ),
-                  ),
-                ),
+                _inputField("Phone Number", phoneController, keyboard: TextInputType.phone),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    hintText: "Password",
-                    filled: true,
-                    fillColor: const Color(0xFFF1F4FF),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
+                _inputField("Password", passwordController, isPassword: true),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: confirmPasswordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    hintText: "Confirm Password",
-                    filled: true,
-                    fillColor: const Color(0xFFF1F4FF),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
+                _inputField("Confirm Password", confirmPasswordController, isPassword: true),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
@@ -234,9 +156,7 @@ class SignupPage extends StatelessWidget {
                     onPressed: () => registerUser(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1D2AFF),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       elevation: 3,
                     ),
                     child: const Text("Signup", style: TextStyle(fontSize: 16, color: Colors.white)),
@@ -248,19 +168,31 @@ class SignupPage extends StatelessWidget {
                   children: [
                     const Text("Already have an account?"),
                     TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: const Text(
-                        "Login",
-                        style: TextStyle(color: Color(0xFF1D2AFF)),
-                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Login", style: TextStyle(color: Color(0xFF1D2AFF))),
                     ),
                   ],
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _inputField(String hint, TextEditingController controller, {bool isPassword = false, TextInputType? keyboard}) {
+    return TextField(
+      controller: controller,
+      obscureText: isPassword,
+      keyboardType: keyboard,
+      decoration: InputDecoration(
+        hintText: hint,
+        filled: true,
+        fillColor: const Color(0xFFF1F4FF),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
         ),
       ),
     );

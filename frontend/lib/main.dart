@@ -9,10 +9,14 @@ import 'registration.dart';
 import 'dashboard.dart';
 import 'admin_dashboard.dart';
 import 'volunteer_dashboard.dart';
+import 'notificationhistory.dart'; // <-- For notification navigation
+import 'utils/flutter_flood_local_notifications.dart'; // <-- For flood alerts
 
-// ✅ Local Notification Plugin
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
+
+// ✅ Global navigator key to allow navigation from notifications
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 /// ✅ Background FCM handler
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -25,7 +29,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   );
 }
 
-/// ✅ Show notification locally
+/// ✅ Show local notification (FCM or custom)
 Future<void> showLocalNotification(String title, String body) async {
   const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
     'disaster_channel',
@@ -44,7 +48,7 @@ Future<void> showLocalNotification(String title, String body) async {
     title,
     body,
     platformDetails,
-    payload: 'default',
+    payload: 'flood_alert', // 👈 Important for navigation
   );
 }
 
@@ -52,17 +56,43 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
-  // ✅ Initialize local notification system
+  // ✅ Initialize local notification (for flood alerts)
+  await initializeLocalNotifications();
+
+  // ✅ Init local notifications with tap handler
   const AndroidInitializationSettings androidInitSettings =
       AndroidInitializationSettings('@mipmap/ic_launcher');
   const InitializationSettings initSettings =
       InitializationSettings(android: androidInitSettings);
-  await flutterLocalNotificationsPlugin.initialize(initSettings);
 
-  // ✅ Handle background/terminated messages
+  await flutterLocalNotificationsPlugin.initialize(
+  initSettings,
+  onDidReceiveNotificationResponse: (NotificationResponse response) {
+    final payload = response.payload;
+    if (payload == 'flood_alert') {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(builder: (_) => NotificationHistoryScreen()),
+      );
+    }
+  },
+);
+  // ✅ Register FCM notification channel
+  const AndroidNotificationChannel channel = AndroidNotificationChannel(
+    'disaster_channel',
+    'Disaster Alerts',
+    description: 'Channel for disaster alert notifications',
+    importance: Importance.high,
+  );
+
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(channel);
+
+  // ✅ FCM background handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // ✅ Handle foreground notifications
+  // ✅ FCM foreground messages
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     print("🔔 [Foreground] message: ${message.notification?.title}");
     showLocalNotification(
@@ -71,7 +101,7 @@ void main() async {
     );
   });
 
-  // ✅ Get FCM token (for testing on Firebase Console)
+  // ✅ Print FCM Token (for testing)
   FirebaseMessaging messaging = FirebaseMessaging.instance;
   String? fcmToken = await messaging.getToken();
   print("📱 FCM Token: $fcmToken");
@@ -107,6 +137,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'SafeSewa',
+      navigatorKey: navigatorKey, // ✅ Add this for global navigation
       theme: ThemeData(primarySwatch: Colors.blue),
       home: homeScreen,
       routes: {
