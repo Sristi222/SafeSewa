@@ -20,6 +20,7 @@ class _SignInPageState extends State<SignInPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   bool isLoading = false;
+  bool _obscurePassword = true;  // Track the visibility of password
 
   Future<void> loginUser(BuildContext context) async {
     final email = emailController.text.trim();
@@ -166,7 +167,7 @@ class _SignInPageState extends State<SignInPage> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: passwordController,
-                  obscureText: true,
+                  obscureText: _obscurePassword,  // Use the state variable
                   decoration: InputDecoration(
                     hintText: "Password",
                     filled: true,
@@ -174,6 +175,19 @@ class _SignInPageState extends State<SignInPage> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide.none,
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: const Color(0xFF1D2AFF),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;  // Toggle visibility
+                        });
+                      },
                     ),
                   ),
                 ),

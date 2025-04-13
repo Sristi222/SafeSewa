@@ -111,7 +111,7 @@ class _DashboardState extends State<Dashboard> {
   Future<void> _fetchWeather() async {
     setState(() => isLoadingWeather = true);
     try {
-      final response = await http.get(Uri.parse('http://192.168.1.10:3000/api/weather'));
+      final response = await http.get(Uri.parse('http://192.168.1.4:3000/api/weather'));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {

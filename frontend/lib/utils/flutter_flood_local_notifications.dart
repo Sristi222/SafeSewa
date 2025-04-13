@@ -56,7 +56,7 @@ Future<void> showFloodAlertNotification(int count) async {
   // 🌐 Save to backend
   try {
     final response = await http.post(
-      Uri.parse('http://192.168.1.10:3000/api/notifications/flood'),
+      Uri.parse('http://192.168.1.4:3000/api/notifications/flood'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'title': '⚠️ Flood Alert!',
